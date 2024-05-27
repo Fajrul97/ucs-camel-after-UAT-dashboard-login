@@ -1,0 +1,785 @@
+package org.i3mid;
+
+import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.http.HttpComponent;
+import org.apache.camel.component.jackson.JacksonDataFormat;
+import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.model.rest.RestBindingMode;
+import org.apache.camel.support.jsse.SSLContextParameters;
+import org.apache.camel.support.jsse.TrustManagersParameters;
+import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
+import org.i3mid.exception.ResultMoreThanOneException;
+import org.i3mid.exception.ResultNotFoundException;
+import org.i3mid.models.ChangePasswordRequest;
+import org.i3mid.models.Response;
+import org.i3mid.models.UserInput;
+import org.i3mid.models.UserOutput;
+import org.i3mid.models.UserVerifyPassword;
+import org.i3mid.process.CreateUserTemplate;
+import org.i3mid.util.AESEncryptionUtil;
+import org.i3mid.util.JWTProcessor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
+import java.net.Socket;
+import java.nio.file.AccessDeniedException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+
+@ApplicationScoped
+public class Routes extends RouteBuilder {
+
+    @Override
+    public void configure() throws Exception {
+        HttpComponent httpComponent = getContext().getComponent("https", HttpComponent.class);
+        TrustManagersParameters trustManagersParameters = new TrustManagersParameters();
+        X509ExtendedTrustManager extendedTrustManager = new InsecureX509TrustManager();
+        trustManagersParameters.setTrustManager(extendedTrustManager);
+
+        SSLContextParameters sslContextParameters = new SSLContextParameters();
+        sslContextParameters.setTrustManagers(trustManagersParameters);
+        httpComponent.setSslContextParameters(sslContextParameters);
+        httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
+
+        String ucsBaseUrl = new ConfigUCS().getBaseUrl();
+        String ucsUsername = new ConfigUCS().getUsername();
+        String ucsPassword = new ConfigUCS().getPassword();
+        String ucsBasic64 = new ConfigUCS().getBasic64();
+
+        restConfiguration().bindingMode(RestBindingMode.json);
+
+        rest("/ldapService")
+                .get().to("direct:restService");
+
+        from("direct:restService")
+                .choice()
+                .when(simple("${header.operation} == 'search'"))
+                .to("direct:searchService")
+                .when(simple("${header.operation} == 'addUser'"))
+                .to("direct:addUserService")
+                .when(simple("${header.operation} == 'deleteUser'"))
+                .to("direct:searchDeleteUserService")
+                .when(simple("${header.operation} == 'changePassword'"))
+                .to("direct:searchChangePasswordService")
+                .when(simple("${header.operation} == 'resetPassword'"))
+                .to("direct:searchResetPasswordService")
+                .when(simple("${header.operation} == 'verifyPassword'"))
+                .to("direct:searchVerifyPasswordService")
+                .endChoice();
+
+        ////////// Search User Service
+
+        from("direct:searchService")
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+                        
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                        
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("tester");
+
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Accept", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                        
+
+                .unmarshal(new JacksonDataFormat(UserInput.class))
+                .setBody(exchange -> {
+                    try {
+                        return new UserOutput(exchange.getIn().getBody(UserInput.class));
+                    } catch (ResultMoreThanOneException | ResultNotFoundException e) {
+                        System.out.println(e.getClass());
+                        throw new RuntimeException(e);
+                    }
+                })
+                .log(("Sending response ${body}"))
+
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(exchange -> {
+                    
+                    return new Response("94", "INVALID USER ROLE");
+                })
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(ResultNotFoundException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setBody(exchange -> {
+                    return new Response("99", "DATA NOT FOUND");
+                })
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+        ;
+
+        ////////////////// Add User Service
+        from("direct:addUserService")
+                .process(new CreateUserTemplate())
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("Accept", constant("application/json"))
+
+                .setHeader("Authorization", constant(ucsBasic64))
+
+                .marshal().json()
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/")
+
+                .setBody(exchange -> new Response("00", "SUCCESS"))
+                .removeHeaders("Camel*")
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .unmarshal().json()
+                .end()
+
+                .onException(HttpOperationFailedException.class)
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper().writeValueAsString(new Response("98", "ID ALREADY EXIST"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                .handled(true)
+                .log(("Sending response ${body}"))
+                .end()
+
+        ;
+
+        /////////////// Delete User Service
+        from("direct:searchDeleteUserService")
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Accept", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+
+                .unmarshal(new JacksonDataFormat(UserInput.class))
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return false;
+                        }
+
+                        List<String> groups = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getProperties()
+                                .getGroups();
+
+                        // Adding list of blocked group
+                        List<String> forbiddenStrings = new ArrayList<>();
+                        // forbiddenStrings.add("Computers");
+                        forbiddenStrings.add("Domain Admins");
+                        forbiddenStrings.add("Administrators");
+                        forbiddenStrings.add("ITSEC");
+                        forbiddenStrings.add("IT-SECDP");
+
+                        // Check if any group contains a forbidden string
+                        boolean containsForbidden = groups.stream()
+                                .anyMatch(group -> forbiddenStrings.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsForbidden", Boolean.valueOf(containsForbidden));
+
+                        return !containsForbidden;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setBody(exchange -> {
+                    try {
+                        String body = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getDn().toString()
+                                .replaceAll(",", "%2C");
+                        exchange.setProperty("MyBodyProperty", body.toString());
+                        return body;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .to("direct:deleteUserService")
+                .when(exchange -> {
+                    try {
+
+                        Boolean containsForbidden = (Boolean) exchange.getProperty("containsForbidden");
+
+                        return containsForbidden != null;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .log(("Sending response ${body}"))
+                
+
+                .when(exchange -> {
+                    try {
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return true;
+                        }
+                        return false;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setBody(exchange -> {
+                    return new Response("99", "DATA NOT FOUND");
+                })
+                .marshal().json()
+
+                .log(("Sending response ${body}"))
+                .end()
+
+        ;
+
+        from("direct:deleteUserService")
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
+                .setHeader("Accept", constant("application/json"))
+
+                .setHeader("Authorization", constant(ucsBasic64))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+
+                .setBody(exchange -> {
+                    try {
+                        return new Response("00", "SUCCESS");
+                    } catch (Exception e) {
+                        return "ERROR";
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .unmarshal().json()
+                .end()
+
+        ;
+
+        ///////////// Change Password Service
+        from("direct:searchChangePasswordService")
+
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Accept", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+
+                .unmarshal(new JacksonDataFormat(UserInput.class))
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return false;
+                        }
+
+                        List<String> groups = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getProperties()
+                                .getGroups();
+
+                        // Adding list of blocked group
+                        List<String> forbiddenStrings = new ArrayList<>();
+                        // forbiddenStrings.add("Computers");
+                        forbiddenStrings.add("Domain Admins");
+                        forbiddenStrings.add("Administrators");
+                        forbiddenStrings.add("ITSEC");
+                        forbiddenStrings.add("IT-SECDP");
+
+                        // Check if any group contains a forbidden string
+                        boolean containsForbidden = groups.stream()
+                                .anyMatch(group -> forbiddenStrings.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsForbidden", Boolean.valueOf(containsForbidden));
+
+                        return !containsForbidden;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setBody(exchange -> {
+                    try {
+                        String body = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getDn().toString()
+                                .replaceAll(",", "%2C");
+                        exchange.setProperty("MyBodyProperty", body.toString());
+
+                        String encryptedPassword = exchange.getIn().getHeader("newPassword", String.class)
+                                .replaceAll(" ", "+");
+
+                        // process decryption
+                        String password = new String(AESEncryptionUtil
+                                .decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), encryptedPassword));
+
+                        return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
+
+                    } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+
+                        return new RuntimeException(e);
+                    } finally {
+                        // Do nothing
+                    }
+                })
+                .marshal().json()
+                .to("direct:changePasswordService")
+                .when(exchange -> {
+                    try {
+
+                        Boolean containsForbidden = (Boolean) exchange.getProperty("containsForbidden");
+
+                        return containsForbidden != null;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .log(("Sending response ${body}"))
+                
+
+                .when(exchange -> {
+                    try {
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return true;
+                        }
+                        return false;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setBody(exchange -> {
+                    return new Response("99", "DATA NOT FOUND");
+                })
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(IllegalArgumentException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper()
+                                .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .log(("Sending response ${body}"))
+                .handled(true)
+                .end()
+
+        ;
+
+        from("direct:changePasswordService")
+                .removeHeaders("Camel*")
+                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
+                .setHeader("Content-Type", constant("application/json"))
+
+                .setHeader("Authorization", constant(ucsBasic64))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+
+                .setBody(exchange -> {
+                    try {
+                        return new Response("00", "SUCCESS");
+                    } catch (Exception e) {
+                        return "ERROR";
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .unmarshal().json()
+                .end()
+
+        ;
+
+        ////////////// Reset Password Service
+        from("direct:searchResetPasswordService")
+
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Accept", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+
+                .unmarshal(new JacksonDataFormat(UserInput.class))
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return false;
+                        }
+
+                        List<String> groups = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getProperties()
+                                .getGroups();
+
+                        // Adding list of blocked group
+                        List<String> forbiddenStrings = new ArrayList<>();
+                        // forbiddenStrings.add("Computers");
+                        forbiddenStrings.add("Domain Admins");
+                        forbiddenStrings.add("Administrators");
+                        forbiddenStrings.add("ITSEC");
+                        forbiddenStrings.add("IT-SECDP");
+
+                        // Check if any group contains a forbidden string
+                        boolean containsForbidden = groups.stream()
+                                .anyMatch(group -> forbiddenStrings.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsForbidden", Boolean.valueOf(containsForbidden));
+
+                        return !containsForbidden;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setBody(exchange -> {
+                    try {
+
+                        String body = exchange.getIn()
+                                .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getDn().toString()
+                                .replaceAll(",", "%2C");
+                        exchange.setProperty("MyBodyProperty", body.toString());
+
+                        return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
+                                exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
+                                        .getProperties().getBirthday().replaceAll("-", ""));
+
+                    } finally {
+                        // Do nothing
+                    }
+                })
+                .marshal().json()
+                .log(LoggingLevel.DEBUG, "${body}")
+                .to("direct:resetPasswordService")
+
+                .when(exchange -> {
+                    try {
+
+                        Boolean containsForbidden = (Boolean) exchange.getProperty("containsForbidden");
+
+                        return containsForbidden != null;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .log(("Sending response ${body}"))
+
+                .when(exchange -> {
+                    try {
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return true;
+                        }
+                        return false;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setBody(exchange -> {
+                    return new Response("99", "DATA NOT FOUND");
+                })
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+        ;
+
+        from("direct:resetPasswordService")
+
+                .removeHeaders("Camel*")
+                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
+                .setHeader("Content-Type", constant("application/json"))
+
+                .setHeader("Authorization", constant(ucsBasic64))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+
+                .setBody(exchange -> {
+                    try {
+                        return new Response("00", "SUCCESS");
+                    } catch (Exception e) {
+                        return "ERROR";
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .unmarshal().json()
+                .end()
+
+        ;
+
+        ////////////// Verify Password Service
+        from("direct:searchVerifyPasswordService")
+
+
+                .removeHeader("Authorization")
+                .removeHeaders("Camel*")
+
+                .log("Received request from ${headers}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Accept", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+
+                .unmarshal(new JacksonDataFormat(UserInput.class))
+                .choice()
+                .when(exchange -> {
+                    try {
+                        if (exchange.getIn().getBody(UserInput.class).getResults() == 1) {
+                            return true;
+                        }
+                        return false;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setBody(exchange -> {
+                    try {
+
+                        exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
+
+                        String username = exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
+                                .getProperties().getUsername();
+                        String encryptedPassword = exchange.getIn().getHeader("password", String.class).replaceAll(" ",
+                                "+");
+
+                        String password = new String(AESEncryptionUtil
+                                .decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), encryptedPassword));
+
+                        String concat = username + ":" + password;
+                        exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
+
+                        exchange.getIn().setHeader("Authorization",
+                                "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
+
+                        return new UserVerifyPassword(username);
+
+                    } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                        // Do nothing
+                        return null;
+                    } finally {
+                        // Do nothing
+                    }
+                })
+                .marshal().json()
+                .log(LoggingLevel.DEBUG, "${body}")
+                .to("direct:verifyPasswordService")
+                .when(exchange -> {
+                    try {
+                        if (exchange.getIn().getBody(UserInput.class).getResults() != 1) {
+                            return true;
+                        }
+                        return false;
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setBody(exchange -> {
+                    return new Response("99", "DATA NOT FOUND");
+                })
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(IllegalArgumentException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+                .setBody(exchange -> {
+                    try {
+                        return new ObjectMapper()
+                                .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
+                    } catch (JsonProcessingException e) {
+                        return "ERROR";
+                    }
+                })
+                .log(("Sending response ${body}"))
+                .handled(true)
+                .end()
+
+        ;
+
+        from("direct:verifyPasswordService")
+                .removeHeaders("Camel*")
+                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
+                .setHeader("Content-Type", constant("application/json"))
+
+                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=" + "${exchangeProperty.MyBodyProperty}")
+
+                .log(("Sending response ${body}"))
+                .onException(HttpOperationFailedException.class)
+                .onWhen(exceptionMessage().contains("statusCode: 401"))
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(exchange -> {
+
+                    return new Response("99", "INVALID PASSWORD");
+                })
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(HttpOperationFailedException.class)
+                .onWhen(exceptionMessage().not().contains("statusCode: 401"))
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                .setBody(exchange -> {
+
+                    return new Response("00", "SUCCESS");
+                })
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .unmarshal().json()
+                .end()
+
+        ;
+
+    }
+
+    private static class InsecureX509TrustManager extends X509ExtendedTrustManager {
+        @Override
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
+                throws CertificateException {
+
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
+                throws CertificateException {
+
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
+                throws CertificateException {
+
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
+                throws CertificateException {
+
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+        }
+    }
+
+}
