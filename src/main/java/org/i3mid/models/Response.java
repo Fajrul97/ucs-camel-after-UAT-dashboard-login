@@ -23,4 +23,11 @@ public class Response implements Serializable {
     public void setResponseDescription(String responseDescription) {
         ResponseDescription = responseDescription;
     }
+
+    @Override
+    public String toString() {
+        return "Response [ResponseCode=" + ResponseCode + ", ResponseDescription=" + ResponseDescription + "]";
+    }
+
+    
 }

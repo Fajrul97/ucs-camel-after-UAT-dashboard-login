@@ -24,6 +24,7 @@ import org.i3mid.util.JWTProcessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.netty.util.Constant;
 import jakarta.enterprise.context.ApplicationScoped;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -56,12 +57,14 @@ public class Routes extends RouteBuilder {
         httpComponent.setSslContextParameters(sslContextParameters);
         httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 
-        String ucsBaseUrl = new ConfigUCS().getBaseUrl();
-        String ucsUsername = new ConfigUCS().getUsername();
-        String ucsPassword = new ConfigUCS().getPassword();
-        String ucsBasic64 = new ConfigUCS().getBasic64();
+        // String ucsBaseUrl = new ConfigUCS().getBaseUrl();
+        // String ucsUsername = new ConfigUCS().getUsername();
+        // String ucsPassword = new ConfigUCS().getPassword();
+        // String ucsBasic64 = new ConfigUCS().getBasic64();
 
-        restConfiguration().bindingMode(RestBindingMode.json);
+
+
+        // restConfiguration().bindingMode(RestBindingMode.json);
 
         rest("/ldapService")
                 .get().to("direct:restService");
@@ -121,8 +124,8 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
                         
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -134,14 +137,17 @@ public class Routes extends RouteBuilder {
                         throw new RuntimeException(e);
                     }
                 })
+                .marshal().json()
                 .log(("Sending response ${body}"))
+                
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(exchange -> {
+                // .setBody(exchange -> {
                     
-                    return new Response("94", "INVALID USER ROLE");
-                })
+                //     return new Response("94", "INVALID USER ROLE");
+                // })
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -149,9 +155,10 @@ public class Routes extends RouteBuilder {
 
                 .onException(ResultNotFoundException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(exchange -> {
-                    return new Response("99", "DATA NOT FOUND");
-                })
+                // .setBody(exchange -> {
+                //     return new Response("99", "DATA NOT FOUND");
+                // })
+                .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -170,30 +177,28 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
                 .setHeader("Accept", constant("application/json"))
 
-                .setHeader("Authorization", constant(ucsBasic64))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .marshal().json()
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/")
+                .toD( "{{ucs.baseUrl}}/univention/udm/users/user/")
 
-                .setBody(exchange -> new Response("00", "SUCCESS"))
+                // .setBody(exchange -> new Response("00", "SUCCESS"))
+                .setBody(constant(new Response("00", "SUCCESS")))
                 .removeHeaders("Camel*")
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                .unmarshal().json()
                 .end()
 
                 .onException(HttpOperationFailedException.class)
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper().writeValueAsString(new Response("98", "ID ALREADY EXIST"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     return new ObjectMapper().writeValueAsString(new Response("98", "ID ALREADY EXIST"));
+                // })
+                .setBody(constant(new Response("98", "ID ALREADY EXIST")))
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
                 .handled(true)
+                .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
 
@@ -209,8 +214,8 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .choice()
@@ -227,7 +232,7 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        // forbiddenStrings.add("Computers");
+                        forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -257,6 +262,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .to("direct:deleteUserService")
+
                 .when(exchange -> {
                     try {
 
@@ -268,15 +274,16 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                //     } catch (JsonProcessingException e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("97", "FORBIDDEN")))
+                .marshal().json()
                 .log(("Sending response ${body}"))
-                
 
                 .when(exchange -> {
                     try {
@@ -289,11 +296,11 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(exchange -> {
-                    return new Response("99", "DATA NOT FOUND");
-                })
+                // .setBody(exchange -> {
+                //     return new Response("99", "DATA NOT FOUND");
+                // })
+                .setBody(constant(new Response("99", "NOT FOUND")))
                 .marshal().json()
-
                 .log(("Sending response ${body}"))
                 .end()
 
@@ -306,21 +313,22 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
                 .setHeader("Accept", constant("application/json"))
 
-                .setHeader("Authorization", constant(ucsBasic64))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
-                .setBody(exchange -> {
-                    try {
-                        return new Response("00", "SUCCESS");
-                    } catch (Exception e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new Response("00", "SUCCESS");
+                //     } catch (Exception e) {
+                //         return "ERROR";
+                //     }
+                // })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                .unmarshal().json()
+                // .unmarshal().json()
                 .end()
 
         ;
@@ -336,8 +344,8 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .choice()
@@ -354,7 +362,7 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        // forbiddenStrings.add("Computers");
+                        forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -409,13 +417,15 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                //     } catch (JsonProcessingException e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("97", "FORBIDDEN")))
+                .marshal().json()
                 .log(("Sending response ${body}"))
                 
 
@@ -430,23 +440,26 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(exchange -> {
-                    return new Response("99", "DATA NOT FOUND");
-                })
+                // .setBody(exchange -> {
+                //     return new Response("99", "DATA NOT FOUND");
+                // })
+                .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
 
                 .onException(IllegalArgumentException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper()
-                                .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new ObjectMapper()
+                //                 .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
+                //     } catch (JsonProcessingException e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGHORITHM")))
+                .marshal().json()
                 .log(("Sending response ${body}"))
                 .handled(true)
                 .end()
@@ -458,22 +471,21 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
                 .setHeader("Content-Type", constant("application/json"))
 
-                .setHeader("Authorization", constant(ucsBasic64))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
-                .setBody(exchange -> {
-                    try {
-                        return new Response("00", "SUCCESS");
-                    } catch (Exception e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new Response("00", "SUCCESS");
+                //     } catch (Exception e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("00", "SUCCESS")))
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                .unmarshal().json()
                 .end()
 
         ;
@@ -489,8 +501,8 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .choice()
@@ -543,6 +555,7 @@ public class Routes extends RouteBuilder {
                 })
                 .marshal().json()
                 .log(LoggingLevel.DEBUG, "${body}")
+
                 .to("direct:resetPasswordService")
 
                 .when(exchange -> {
@@ -556,13 +569,15 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new ObjectMapper().writeValueAsString(new Response("97", "FORBIDDEN"));
+                //     } catch (JsonProcessingException e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("97", "FORBIDDEN")))
+                .marshal().json()
                 .log(("Sending response ${body}"))
 
                 .when(exchange -> {
@@ -576,9 +591,10 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(exchange -> {
-                    return new Response("99", "DATA NOT FOUND");
-                })
+                // .setBody(exchange -> {
+                //     return new Response("99", "DATA NOT FOUND");
+                // })
+                .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
@@ -591,22 +607,22 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
                 .setHeader("Content-Type", constant("application/json"))
 
-                .setHeader("Authorization", constant(ucsBasic64))
+                .setHeader("Authorization", constant("{{ucs.basic64}}"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
-                .setBody(exchange -> {
-                    try {
-                        return new Response("00", "SUCCESS");
-                    } catch (Exception e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new Response("00", "SUCCESS");
+                //     } catch (Exception e) {
+                //         return "ERROR";
+                //     }
+                // })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-
+                .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                .unmarshal().json()
+                // .unmarshal().json()
                 .end()
 
         ;
@@ -623,8 +639,8 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername=" + ucsUsername + "&authPassword=" + ucsPassword)
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .choice()
@@ -681,23 +697,26 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(exchange -> {
-                    return new Response("99", "DATA NOT FOUND");
-                })
+                // .setBody(exchange -> {
+                //     return new Response("99", "DATA NOT FOUND");
+                // })
+                .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
 
                 .onException(IllegalArgumentException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                .setBody(exchange -> {
-                    try {
-                        return new ObjectMapper()
-                                .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
-                    } catch (JsonProcessingException e) {
-                        return "ERROR";
-                    }
-                })
+                // .setBody(exchange -> {
+                //     try {
+                //         return new ObjectMapper()
+                //                 .writeValueAsString(new Response("96", "INVALID ENCRYPTION ALGORITHM"));
+                //     } catch (JsonProcessingException e) {
+                //         return "ERROR";
+                //     }
+                // })
+                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
+                .marshal().json()
                 .log(("Sending response ${body}"))
                 .handled(true)
                 .end()
@@ -709,17 +728,19 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
                 .setHeader("Content-Type", constant("application/json"))
 
-                .toD(ucsBaseUrl + "/univention/udm/users/user/?query[uid]=" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=" + "${exchangeProperty.MyBodyProperty}")
 
                 .log(("Sending response ${body}"))
+
                 .onException(HttpOperationFailedException.class)
                 .onWhen(exceptionMessage().contains("statusCode: 401"))
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(exchange -> {
+                // .setBody(exchange -> {
 
-                    return new Response("99", "INVALID PASSWORD");
-                })
+                //     return new Response("99", "INVALID PASSWORD");
+                // })
+                .setBody(constant(new Response("99", "INVALID PASSWORD")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
@@ -728,13 +749,14 @@ public class Routes extends RouteBuilder {
                 .onWhen(exceptionMessage().not().contains("statusCode: 401"))
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-                .setBody(exchange -> {
+                // .setBody(exchange -> {
 
-                    return new Response("00", "SUCCESS");
-                })
+                //     return new Response("00", "SUCCESS");
+                // })
+                .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                .unmarshal().json()
+                // .unmarshal().json()
                 .end()
 
         ;
