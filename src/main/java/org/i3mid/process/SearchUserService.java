@@ -12,13 +12,6 @@ public class SearchUserService implements Processor {
         UserInput input = exchange.getIn().getBody(UserInput.class);
         int id = exchange.getIn().getHeader("id", Integer.class);
 
-        // for (UDMObject user : input.get_embedded().getUdmobject()) {
-        //     if (user.getProperties().getUidNumber() == id) {
-        //         exchange.getIn().setBody(user);
-        //         break;
-        //     }
-        // }
-
         if (!(exchange.getIn().getBody() instanceof UDMObject)) {
             throw new ResultNotFoundException("User with ID " + id + " is not found in query");
         }

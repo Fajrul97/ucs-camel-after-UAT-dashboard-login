@@ -13,7 +13,6 @@ public class UDMProperties implements Serializable {
     private String username;
     private String firstname;
     private String lastname;
-    //private int uidNumber;
     private String password;
     private String birthday;
     private String employeeNumber;
@@ -23,7 +22,6 @@ public class UDMProperties implements Serializable {
     private String organisation;
     private String passwordexpiry;
     private String[] departmentNumber;
-    // @JsonInclude(JsonInclude.Include.NON_NULL)
     private String dn;
     private String displayName;
     private boolean overridePWHistory;
