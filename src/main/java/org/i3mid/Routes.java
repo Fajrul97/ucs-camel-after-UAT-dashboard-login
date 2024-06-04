@@ -57,7 +57,6 @@ public class Routes extends RouteBuilder {
         httpComponent.setSslContextParameters(sslContextParameters);
         httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 
-
         // restConfiguration().bindingMode(RestBindingMode.json);
 
         rest("/ldapService")
@@ -81,7 +80,7 @@ public class Routes extends RouteBuilder {
 
         ////////// Search User Service
 
-        from("direct:searchService")
+        from("direct:searchService").logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -89,9 +88,9 @@ public class Routes extends RouteBuilder {
                 .choice()
                 .when(exchange -> {
                     try {
-                        
+
                         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
-                        
+
                         // Adding list of blocked roles
                         List<String> allowedRoles = new ArrayList<>();
                         allowedRoles.add("tester");
@@ -112,6 +111,13 @@ public class Routes extends RouteBuilder {
                 .end()
 
                 .removeHeader("Authorization")
+
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
                 .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
@@ -120,7 +126,6 @@ public class Routes extends RouteBuilder {
 
                 .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
-                        
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .setBody(exchange -> {
@@ -133,7 +138,6 @@ public class Routes extends RouteBuilder {
                 })
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
@@ -154,10 +158,17 @@ public class Routes extends RouteBuilder {
         ;
 
         ////////////////// Add User Service
-        from("direct:addUserService")
+        from("direct:addUserService").logMask()
                 .process(new CreateUserTemplate())
 
                 .removeHeader("Authorization")
+
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
                 .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
@@ -168,7 +179,7 @@ public class Routes extends RouteBuilder {
 
                 .marshal().json()
 
-                .toD( "{{ucs.baseUrl}}/univention/udm/users/user/")
+                .toD("{{ucs.baseUrl}}/univention/udm/users/user/")
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
@@ -188,9 +199,16 @@ public class Routes extends RouteBuilder {
         ;
 
         /////////////// Delete User Service
-        from("direct:searchDeleteUserService")
+        from("direct:searchDeleteUserService").logMask()
 
                 .removeHeader("Authorization")
+
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
                 .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
@@ -281,7 +299,6 @@ public class Routes extends RouteBuilder {
 
         from("direct:deleteUserService")
 
-                .removeHeader("Authorization")
                 .removeHeaders("Camel*")
                 .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
                 .setHeader("Accept", constant("application/json"))
@@ -299,10 +316,16 @@ public class Routes extends RouteBuilder {
         ;
 
         ///////////// Change Password Service
-        from("direct:searchChangePasswordService")
-
+        from("direct:searchChangePasswordService").logMask()
 
                 .removeHeader("Authorization")
+
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
                 .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
@@ -385,7 +408,6 @@ public class Routes extends RouteBuilder {
                 .setBody(constant(new Response("97", "FORBIDDEN")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
-                
 
                 .when(exchange -> {
                     try {
@@ -431,10 +453,16 @@ public class Routes extends RouteBuilder {
         ;
 
         ////////////// Reset Password Service
-        from("direct:searchResetPasswordService")
-
+        from("direct:searchResetPasswordService").logMask()
 
                 .removeHeader("Authorization")
+
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
                 .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
@@ -494,7 +522,6 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .marshal().json()
-                .log(LoggingLevel.DEBUG, "${body}")
 
                 .to("direct:resetPasswordService")
 
@@ -550,12 +577,17 @@ public class Routes extends RouteBuilder {
         ;
 
         ////////////// Verify Password Service
-        from("direct:searchVerifyPasswordService")
-
+        from("direct:searchVerifyPasswordService").logMask()
 
                 .removeHeader("Authorization")
-                .removeHeaders("Camel*")
 
+                .setHeader("HttpMethod", header("CamelHttpMethod"))
+                .setHeader("HttpPath", header("CamelHttpPath"))
+                .setHeader("HttpUrl", header("CamelHttpUrl"))
+                .setHeader("HttpLocalAddress", header("CamelVertxPlatformHttpLocalAddress"))
+                .setHeader("HttpRemoteAddress", header("CamelVertxPlatformHttpRemoteAddress"))
+
+                .removeHeaders("Camel*")
                 .log("Received request from ${headers}")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
@@ -606,7 +638,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .marshal().json()
-                .log(LoggingLevel.DEBUG, "${body}")
+                
                 .to("direct:verifyPasswordService")
                 .when(exchange -> {
                     try {

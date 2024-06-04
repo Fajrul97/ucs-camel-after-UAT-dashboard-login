@@ -54,9 +54,9 @@ public class AESEncryptionUtil {
 
     public static void main(String[] args) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         //untuk encrypt
-        System.out.println(Base64.getEncoder().encodeToString(encrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "20230201")));
+        System.out.println(Base64.getEncoder().encodeToString(encrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "blackpink")));
         //untuk decrypt
-        // System.out.println(new String(decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "hlsfoBMnJ7HR2Xwh+37mvg==")));
+        System.out.println(new String(decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "hlsfoBMnJ7HR2Xwh+37mvg==")));
     }
     
 }
