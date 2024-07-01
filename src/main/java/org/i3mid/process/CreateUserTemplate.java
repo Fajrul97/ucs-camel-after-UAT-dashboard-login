@@ -12,7 +12,7 @@ public class CreateUserTemplate implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         String[] departmentNumber = {exchange.getIn().getHeader("departmentNumber", String.class)};
-        int id = exchange.getIn().getHeader("id", Integer.class);
+        String id = exchange.getIn().getHeader("id", String.class);
         String givenName = exchange.getIn().getHeader("givenName", String.class);
         Date inputBirthday = new SimpleDateFormat("yyyyMMdd")
                 .parse(exchange.getIn().getHeader("birthDate", String.class));
@@ -20,7 +20,7 @@ public class CreateUserTemplate implements Processor {
         String displayName = exchange.getIn().getHeader("displayName", String.class);
 
         UDMObject userTemplate = new UDMObject("users/user", departmentNumber,
-                false, null, null, false, String.valueOf(id),
+                false, null, null, false, id,
                 "", givenName, birthday, null, displayName,
                 new SimpleDateFormat("yyyyMMdd").format(inputBirthday), null);
 

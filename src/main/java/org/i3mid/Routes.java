@@ -59,6 +59,9 @@ public class Routes extends RouteBuilder {
 
         // restConfiguration().bindingMode(RestBindingMode.json);
 
+        from("timer:foo?repeatCount=1")
+                .log("JVM Version: ${sys.java.runtime.version}");
+
         rest("/ldapService")
                 .get().to("direct:restService");
 
@@ -93,7 +96,9 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked roles
                         List<String> allowedRoles = new ArrayList<>();
-                        allowedRoles.add("tester");
+                        allowedRoles.add("Administrator");
+                        allowedRoles.add("Operations");
+                        allowedRoles.add("App-Adm");
 
                         // Check if any user have allowed roles
                         boolean containsAllowedRoles = userRoles.stream()
@@ -159,6 +164,35 @@ public class Routes extends RouteBuilder {
 
         ////////////////// Add User Service
         from("direct:addUserService").logMask()
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()
+
                 .process(new CreateUserTemplate())
 
                 .removeHeader("Authorization")
@@ -196,10 +230,46 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
         ;
 
         /////////////// Delete User Service
         from("direct:searchDeleteUserService").logMask()
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()
 
                 .removeHeader("Authorization")
 
@@ -233,7 +303,7 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        forbiddenStrings.add("Computers");
+                        // forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -295,6 +365,14 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
         ;
 
         from("direct:deleteUserService")
@@ -317,6 +395,35 @@ public class Routes extends RouteBuilder {
 
         ///////////// Change Password Service
         from("direct:searchChangePasswordService").logMask()
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+                        allowedRoles.add("App-Adm");
+
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
@@ -350,7 +457,7 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        forbiddenStrings.add("Computers");
+                        // forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -380,7 +487,7 @@ public class Routes extends RouteBuilder {
 
                         // process decryption
                         String password = new String(AESEncryptionUtil
-                                .decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -433,6 +540,14 @@ public class Routes extends RouteBuilder {
                 .handled(true)
                 .end()
 
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
         ;
 
         from("direct:changePasswordService")
@@ -454,6 +569,34 @@ public class Routes extends RouteBuilder {
 
         ////////////// Reset Password Service
         from("direct:searchResetPasswordService").logMask()
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+                        
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
@@ -487,7 +630,7 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        forbiddenStrings.add("Computers");
+                        // forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -556,6 +699,14 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
         ;
 
         from("direct:resetPasswordService")
@@ -578,6 +729,36 @@ public class Routes extends RouteBuilder {
 
         ////////////// Verify Password Service
         from("direct:searchVerifyPasswordService").logMask()
+
+                // Process JWT for RBAC
+                .process(new JWTProcessor())
+
+                .choice()
+                .when(exchange -> {
+                    try {
+
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+                        allowedRoles.add("Operations");
+                        allowedRoles.add("App-Adm");
+
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+
+                        return !containsAllowedRoles;
+
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
@@ -619,7 +800,7 @@ public class Routes extends RouteBuilder {
                                 "+");
 
                         String password = new String(AESEncryptionUtil
-                                .decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         String concat = username + ":" + password;
                         exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
@@ -638,7 +819,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .marshal().json()
-                
+
                 .to("direct:verifyPasswordService")
                 .when(exchange -> {
                     try {
@@ -662,6 +843,14 @@ public class Routes extends RouteBuilder {
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .handled(true)
+                .end()
+
+                .onException(AccessDeniedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
                 .end()
 
         ;

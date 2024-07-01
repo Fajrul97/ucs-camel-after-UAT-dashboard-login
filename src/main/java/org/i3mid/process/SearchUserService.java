@@ -10,7 +10,7 @@ public class SearchUserService implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         UserInput input = exchange.getIn().getBody(UserInput.class);
-        int id = exchange.getIn().getHeader("id", Integer.class);
+        String id = exchange.getIn().getHeader("id", String.class);
 
         if (!(exchange.getIn().getBody() instanceof UDMObject)) {
             throw new ResultNotFoundException("User with ID " + id + " is not found in query");

@@ -32,7 +32,6 @@ public class UDMObject implements Serializable {
         this.objectType = objectType;
         UDMProperties properties = new UDMProperties();
         properties.setDepartmentNumber(departmentNumber);
-        //properties.setUidNumber(uidNumber);
         properties.setDisabled(disabled);
         properties.setOverridePWLength(overridePWLength);
         properties.setOrganisation(organisation);
