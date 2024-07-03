@@ -487,7 +487,7 @@ public class Routes extends RouteBuilder {
 
                         // process decryption
                         String password = new String(AESEncryptionUtil
-                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -800,7 +800,7 @@ public class Routes extends RouteBuilder {
                                 "+");
 
                         String password = new String(AESEncryptionUtil
-                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
 
                         String concat = username + ":" + password;
                         exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
