@@ -33,7 +33,7 @@ public class ChangePasswordRequest implements Serializable {
         ChangePasswordProperties properties = new ChangePasswordProperties();
         properties.setUsername(userInput.get_embedded().getUdmobject().get(0).getId());
         properties.setPassword(newPassword);
-        properties.setOverridePWHistory(true);
+        // properties.setOverridePWHistory(true);
         this.properties = properties;
        
     }

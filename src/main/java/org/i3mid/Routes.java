@@ -58,6 +58,7 @@ public class Routes extends RouteBuilder {
         httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 
         // restConfiguration().bindingMode(RestBindingMode.json);
+    
 
         from("timer:foo?repeatCount=1")
                 .log("JVM Version: ${sys.java.runtime.version}");
@@ -397,33 +398,33 @@ public class Routes extends RouteBuilder {
         from("direct:searchChangePasswordService").logMask()
 
                 // Process JWT for RBAC
-                .process(new JWTProcessor())
+                // .process(new JWTProcessor())
 
-                .choice()
-                .when(exchange -> {
-                    try {
+                // .choice()
+                // .when(exchange -> {
+                //     try {
 
-                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                        // Adding list of blocked roles
-                        List<String> allowedRoles = new ArrayList<>();
-                        allowedRoles.add("Administrator");
-                        allowedRoles.add("App-Adm");
+                //         // Adding list of blocked roles
+                //         List<String> allowedRoles = new ArrayList<>();
+                //         allowedRoles.add("Administrator");
+                //         allowedRoles.add("App-Adm");
 
-                        // Check if any user have allowed roles
-                        boolean containsAllowedRoles = userRoles.stream()
-                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                //         // Check if any user have allowed roles
+                //         boolean containsAllowedRoles = userRoles.stream()
+                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                        return !containsAllowedRoles;
+                //         return !containsAllowedRoles;
 
-                    } finally {
-                        // DO nothing
-                    }
-                })
-                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                //     } finally {
+                //         // DO nothing
+                //     }
+                // })
+                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                // .end()        
 
                 .removeHeader("Authorization")
 
@@ -492,7 +493,7 @@ public class Routes extends RouteBuilder {
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
-                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | IllegalArgumentException e) {
 
                         return new RuntimeException(e);
                     } finally {
@@ -532,13 +533,14 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                .onException(IllegalArgumentException.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGHORITHM")))
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .handled(true)
-                .end()
+                // .onException(IllegalArgumentException.class)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGHORITHM")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .handled(true)
+                // .end()
+
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
@@ -565,38 +567,56 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
+                .onException(HttpOperationFailedException.class)
+                .onWhen(exceptionMessage().contains("statusCode: 422"))
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                // .onException(IllegalArgumentException.class)
+                // .onWhen(exceptionMessage().contains("Input byte array has wrong 4-byte ending unit"))
+                // .handled(true)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .end()
+
         ;
 
         ////////////// Reset Password Service
         from("direct:searchResetPasswordService").logMask()
 
                 // Process JWT for RBAC
-                .process(new JWTProcessor())
+                // .process(new JWTProcessor())
 
-                .choice()
-                .when(exchange -> {
-                    try {
+                // .choice()
+                // .when(exchange -> {
+                //     try {
 
-                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                        // Adding list of blocked roles
-                        List<String> allowedRoles = new ArrayList<>();
-                        allowedRoles.add("Administrator");
+                //         // Adding list of blocked roles
+                //         List<String> allowedRoles = new ArrayList<>();
+                //         allowedRoles.add("Administrator");
                         
-                        // Check if any user have allowed roles
-                        boolean containsAllowedRoles = userRoles.stream()
-                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                //         // Check if any user have allowed roles
+                //         boolean containsAllowedRoles = userRoles.stream()
+                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                        return !containsAllowedRoles;
+                //         return !containsAllowedRoles;
 
-                    } finally {
-                        // DO nothing
-                    }
-                })
-                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                //     } finally {
+                //         // DO nothing
+                //     }
+                // })
+                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                // .end()        
 
                 .removeHeader("Authorization")
 
@@ -657,8 +677,9 @@ public class Routes extends RouteBuilder {
                         exchange.setProperty("MyBodyProperty", body.toString());
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
-                                exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
-                                        .getProperties().getBirthday().replaceAll("-", ""));
+                                // exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
+                                //         .getProperties().getBirthday().replaceAll("-", ""));
+                                "{{defaultPassword}}");
 
                     } finally {
                         // Do nothing
@@ -731,34 +752,34 @@ public class Routes extends RouteBuilder {
         from("direct:searchVerifyPasswordService").logMask()
 
                 // Process JWT for RBAC
-                .process(new JWTProcessor())
+                // .process(new JWTProcessor())
 
-                .choice()
-                .when(exchange -> {
-                    try {
+                // .choice()
+                // .when(exchange -> {
+                //     try {
 
-                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                        // Adding list of blocked roles
-                        List<String> allowedRoles = new ArrayList<>();
-                        allowedRoles.add("Administrator");
-                        allowedRoles.add("Operations");
-                        allowedRoles.add("App-Adm");
+                //         // Adding list of blocked roles
+                //         List<String> allowedRoles = new ArrayList<>();
+                //         allowedRoles.add("Administrator");
+                //         allowedRoles.add("Operations");
+                //         allowedRoles.add("App-Adm");
 
-                        // Check if any user have allowed roles
-                        boolean containsAllowedRoles = userRoles.stream()
-                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                //         // Check if any user have allowed roles
+                //         boolean containsAllowedRoles = userRoles.stream()
+                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                        return !containsAllowedRoles;
+                //         return !containsAllowedRoles;
 
-                    } finally {
-                        // DO nothing
-                    }
-                })
-                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                //     } finally {
+                //         // DO nothing
+                //     }
+                // })
+                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                // .end()        
 
                 .removeHeader("Authorization")
 
@@ -811,7 +832,7 @@ public class Routes extends RouteBuilder {
                         return new UserVerifyPassword(username);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
-                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | IllegalArgumentException e) {
                         // Do nothing
                         return null;
                     } finally {
@@ -837,13 +858,13 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                .onException(IllegalArgumentException.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .handled(true)
-                .end()
+                // .onException(IllegalArgumentException.class)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .handled(true)
+                // .end()
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
@@ -865,15 +886,6 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
 
                 .onException(HttpOperationFailedException.class)
-                .onWhen(exceptionMessage().contains("statusCode: 401"))
-                .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("99", "INVALID PASSWORD")))
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .end()
-
-                .onException(HttpOperationFailedException.class)
                 .onWhen(exceptionMessage().not().contains("statusCode: 401"))
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
@@ -881,6 +893,24 @@ public class Routes extends RouteBuilder {
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
+
+                .onException(HttpOperationFailedException.class)
+                .onWhen(exceptionMessage().contains("statusCode: 401"))
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("99", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                // .onException(HttpOperationFailedException.class)
+                // .onWhen(exceptionMessage().contains("statusCode: 422"))
+                // .handled(true)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .end()
 
         ;
 
