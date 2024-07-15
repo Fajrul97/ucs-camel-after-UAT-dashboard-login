@@ -550,6 +550,8 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
+
+
         ;
 
         from("direct:changePasswordService")
@@ -664,7 +666,8 @@ public class Routes extends RouteBuilder {
 
                         return !containsForbidden;
 
-                    } finally {
+                    }  
+                    finally {
                         // DO nothing
                     }
                 })
@@ -679,9 +682,9 @@ public class Routes extends RouteBuilder {
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
                                 // exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
                                 //         .getProperties().getBirthday().replaceAll("-", ""));
-                                "{{defaultPassword}}");
+                                "12345678");
 
-                    } finally {
+                    }finally {
                         // Do nothing
                     }
                 })
@@ -742,6 +745,15 @@ public class Routes extends RouteBuilder {
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(HttpOperationFailedException.class)
+                .onWhen(exceptionMessage().contains("statusCode: 422"))
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                .setBody(constant(new Response("95", "PASSWORD ALREADY RESET")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
