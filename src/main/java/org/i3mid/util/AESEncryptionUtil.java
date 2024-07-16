@@ -4,7 +4,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -60,6 +63,21 @@ public class AESEncryptionUtil {
         //untuk decrypt
         // System.out.println(new String(decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "hlsfoBMnJ7HR2Xwh+37mvg==")));
         System.out.println(new String(decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "fizbqDcVxNNr7g+v1p9NlQ==")));
+
+        Calendar calendar = Calendar.getInstance();
+
+        // Add 90 days
+        calendar.add(Calendar.DAY_OF_YEAR, 90);
+
+        // Get the new date
+        Date futureDate = calendar.getTime();
+
+        // Format the date to a string
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = sdf.format(futureDate);
+
+        System.out.println("Current date: " + sdf.format(new Date()));
+        System.out.println("Date after 90 days: " + formattedDate);
     }
     
 }

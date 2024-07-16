@@ -398,33 +398,33 @@ public class Routes extends RouteBuilder {
         from("direct:searchChangePasswordService").logMask()
 
                 // Process JWT for RBAC
-                // .process(new JWTProcessor())
+                .process(new JWTProcessor())
 
-                // .choice()
-                // .when(exchange -> {
-                //     try {
+                .choice()
+                .when(exchange -> {
+                    try {
 
-                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                //         // Adding list of blocked roles
-                //         List<String> allowedRoles = new ArrayList<>();
-                //         allowedRoles.add("Administrator");
-                //         allowedRoles.add("App-Adm");
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+                        allowedRoles.add("App-Adm");
 
-                //         // Check if any user have allowed roles
-                //         boolean containsAllowedRoles = userRoles.stream()
-                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                //         return !containsAllowedRoles;
+                        return !containsAllowedRoles;
 
-                //     } finally {
-                //         // DO nothing
-                //     }
-                // })
-                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                // .end()        
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
@@ -593,32 +593,32 @@ public class Routes extends RouteBuilder {
         from("direct:searchResetPasswordService").logMask()
 
                 // Process JWT for RBAC
-                // .process(new JWTProcessor())
+                .process(new JWTProcessor())
 
-                // .choice()
-                // .when(exchange -> {
-                //     try {
+                .choice()
+                .when(exchange -> {
+                    try {
 
-                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                //         // Adding list of blocked roles
-                //         List<String> allowedRoles = new ArrayList<>();
-                //         allowedRoles.add("Administrator");
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
                         
-                //         // Check if any user have allowed roles
-                //         boolean containsAllowedRoles = userRoles.stream()
-                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                //         return !containsAllowedRoles;
+                        return !containsAllowedRoles;
 
-                //     } finally {
-                //         // DO nothing
-                //     }
-                // })
-                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                // .end()        
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
@@ -764,34 +764,34 @@ public class Routes extends RouteBuilder {
         from("direct:searchVerifyPasswordService").logMask()
 
                 // Process JWT for RBAC
-                // .process(new JWTProcessor())
+                .process(new JWTProcessor())
 
-                // .choice()
-                // .when(exchange -> {
-                //     try {
+                .choice()
+                .when(exchange -> {
+                    try {
 
-                //         List<String> userRoles = (List<String>) exchange.getProperty("userRole");
+                        List<String> userRoles = (List<String>) exchange.getProperty("userRole");
 
-                //         // Adding list of blocked roles
-                //         List<String> allowedRoles = new ArrayList<>();
-                //         allowedRoles.add("Administrator");
-                //         allowedRoles.add("Operations");
-                //         allowedRoles.add("App-Adm");
+                        // Adding list of blocked roles
+                        List<String> allowedRoles = new ArrayList<>();
+                        allowedRoles.add("Administrator");
+                        allowedRoles.add("Operations");
+                        allowedRoles.add("App-Adm");
 
-                //         // Check if any user have allowed roles
-                //         boolean containsAllowedRoles = userRoles.stream()
-                //                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
+                        // Check if any user have allowed roles
+                        boolean containsAllowedRoles = userRoles.stream()
+                                .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
 
-                //         exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
+                        exchange.setProperty("containsAllowedRoles", Boolean.valueOf(containsAllowedRoles));
 
-                //         return !containsAllowedRoles;
+                        return !containsAllowedRoles;
 
-                //     } finally {
-                //         // DO nothing
-                //     }
-                // })
-                // .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                // .end()        
+                    } finally {
+                        // DO nothing
+                    }
+                })
+                .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
+                .end()        
 
                 .removeHeader("Authorization")
 
