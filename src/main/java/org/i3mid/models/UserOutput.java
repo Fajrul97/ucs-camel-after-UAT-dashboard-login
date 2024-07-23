@@ -10,7 +10,7 @@ public class UserOutput {
     private String uid;
     private String loginDisabled;
     private String sn;
-    private boolean passwordAllowChange;
+    private boolean pwdChangeNextLogin;
     private String loginTime;
     private String passwordMinimumLength;
     private String passwordRequired;
@@ -24,15 +24,15 @@ public class UserOutput {
     private String ACL;
     private String displayName;
     private String passwordExpirationTime;
-
+    
     public UserOutput(UserInput userInput) throws ResultMoreThanOneException, ResultNotFoundException {
-        System.out.println("Result = " + userInput.getResults());
+        // System.out.println("Result = " + userInput.getResults());
         if (userInput.getResults() == 1 ) {
             UDMObject userObject = userInput.get_embedded().getUdmobject().get(0);
             this.uid = userObject.getUuid();
             this.loginDisabled = String.valueOf(userObject.getProperties().getDisabled());
             this.sn = null;
-            this.passwordAllowChange = userObject.getProperties().getPwdChangeNextLogin();
+            this.pwdChangeNextLogin = userObject.getProperties().getPwdChangeNextLogin();
             this.loginTime = new SimpleDateFormat("yyyyMMddHHmmssZ").format(new Date());
             this.passwordMinimumLength = userObject.getProperties().getOverridePWLength();
             this.passwordRequired = String.valueOf(userObject.getProperties().getPassword() != null);
@@ -72,11 +72,11 @@ public class UserOutput {
     public void setSn(String sn) {
         this.sn = sn;
     }
-    public boolean getPasswordAllowChange() {
-        return passwordAllowChange;
+    public boolean getPwdChangeNextLogin() {
+        return pwdChangeNextLogin;
     }
-    public void setPasswordAllowChange(boolean passwordAllowChange) {
-        this.passwordAllowChange = passwordAllowChange;
+    public void setPwdChangeNextLogin(boolean pwdChangeNextLogin) {
+        this.pwdChangeNextLogin = pwdChangeNextLogin;
     }
     public String getLoginTime() {
         return loginTime;
@@ -163,7 +163,7 @@ public class UserOutput {
                 "uid='" + uid + '\'' +
                 ", loginDisabled='" + loginDisabled + '\'' +
                 ", sn='" + sn + '\'' +
-                ", passwordAllowChange='" + passwordAllowChange + '\'' +
+                ", pwdChangeNextLogin='" + pwdChangeNextLogin + '\'' +
                 ", loginTime='" + loginTime + '\'' +
                 ", passwordMinimumLength='" + passwordMinimumLength + '\'' +
                 ", passwordRequired='" + passwordRequired + '\'' +

@@ -1,8 +1,6 @@
 package org.i3mid.models;
 
 import java.io.Serializable;
-import java.util.Optional;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -33,7 +31,6 @@ public class ChangePasswordRequest implements Serializable {
         ChangePasswordProperties properties = new ChangePasswordProperties();
         properties.setUsername(userInput.get_embedded().getUdmobject().get(0).getId());
         properties.setPassword(newPassword);
-        // properties.setOverridePWHistory(true);
         this.properties = properties;
        
     }
@@ -80,6 +77,7 @@ public class ChangePasswordRequest implements Serializable {
     public String toString() {
         return "ChangePasswordRequest [uuid=" + uuid + ", position=" + position + ", uri=" + uri + ", options="
                 + options + ", policies=" + policies + ", properties=" + properties + "]";
+        
     }
 
 }

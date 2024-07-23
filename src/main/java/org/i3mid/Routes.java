@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.util.Constant;
+import io.quarkus.security.UnauthorizedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -147,7 +148,7 @@ public class Routes extends RouteBuilder {
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -233,7 +234,7 @@ public class Routes extends RouteBuilder {
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -361,14 +362,14 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-                .setBody(constant(new Response("99", "NOT FOUND")))
+                .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -488,7 +489,7 @@ public class Routes extends RouteBuilder {
 
                         // process decryption
                         String password = new String(AESEncryptionUtil
-                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -533,18 +534,10 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                // .onException(IllegalArgumentException.class)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGHORITHM")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .handled(true)
-                // .end()
-
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -578,14 +571,6 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                // .onException(IllegalArgumentException.class)
-                // .onWhen(exceptionMessage().contains("Input byte array has wrong 4-byte ending unit"))
-                // .handled(true)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .end()
 
         ;
 
@@ -682,7 +667,7 @@ public class Routes extends RouteBuilder {
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
                                 // exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
                                 //         .getProperties().getBirthday().replaceAll("-", ""));
-                                "12345678");
+                                "Bankmega1");
 
                     }finally {
                         // Do nothing
@@ -725,7 +710,7 @@ public class Routes extends RouteBuilder {
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -825,7 +810,12 @@ public class Routes extends RouteBuilder {
                 .setBody(exchange -> {
                     try {
 
+                        if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0).getProperties().getPwdChangeNextLogin()){
+                            throw new UnauthorizedException();
+
+                        }
                         exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
+
 
                         String username = exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
                                 .getProperties().getUsername();
@@ -833,7 +823,7 @@ public class Routes extends RouteBuilder {
                                 "+");
 
                         String password = new String(AESEncryptionUtil
-                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         String concat = username + ":" + password;
                         exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
@@ -870,17 +860,17 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                // .onException(IllegalArgumentException.class)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .handled(true)
-                // .end()
+                .onException(UnauthorizedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("94", "MUST CHANGE PASSWORD AFTER CREATE USER")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .handled(true)
+                .end()
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "INVALID USER ROLE")))
+                .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
                 .log(("Sending response ${body}"))
@@ -910,19 +900,10 @@ public class Routes extends RouteBuilder {
                 .onWhen(exceptionMessage().contains("statusCode: 401"))
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("99", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
+                .setBody(constant(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
-
-                // .onException(HttpOperationFailedException.class)
-                // .onWhen(exceptionMessage().contains("statusCode: 422"))
-                // .handled(true)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .end()
 
         ;
 

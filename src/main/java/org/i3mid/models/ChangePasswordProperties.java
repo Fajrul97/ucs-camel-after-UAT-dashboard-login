@@ -7,8 +7,6 @@ public class ChangePasswordProperties {
     private String password;
     private boolean overridePWHistory;
 
-    
-
     public ChangePasswordProperties() {
     }
     

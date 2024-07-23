@@ -58,26 +58,26 @@ public class AESEncryptionUtil {
     public static void main(String[] args) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         //untuk encrypt
         // System.out.println(Base64.getEncoder().encodeToString(encrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "blackpink")));
-        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "20230207")));
+        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "20230205")));
         // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "20230202")));
         //untuk decrypt
         // System.out.println(new String(decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "hlsfoBMnJ7HR2Xwh+37mvg==")));
         System.out.println(new String(decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "fizbqDcVxNNr7g+v1p9NlQ==")));
 
-        Calendar calendar = Calendar.getInstance();
+        // Calendar calendar = Calendar.getInstance();
 
-        // Add 90 days
-        calendar.add(Calendar.DAY_OF_YEAR, 90);
+        // // Add 90 days
+        // calendar.add(Calendar.DAY_OF_YEAR, 90);
 
-        // Get the new date
-        Date futureDate = calendar.getTime();
+        // // Get the new date
+        // Date futureDate = calendar.getTime();
 
-        // Format the date to a string
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        String formattedDate = sdf.format(futureDate);
+        // // Format the date to a string
+        // SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        // String formattedDate = sdf.format(futureDate);
 
-        System.out.println("Current date: " + sdf.format(new Date()));
-        System.out.println("Date after 90 days: " + formattedDate);
+        // System.out.println("Current date: " + sdf.format(new Date()));
+        // System.out.println("Date after 90 days: " + formattedDate);
     }
     
 }
