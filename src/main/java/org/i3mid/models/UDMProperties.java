@@ -14,7 +14,7 @@ public class UDMProperties implements Serializable {
     private String firstname;
     private String lastname;
     private String password;
-    private String birthday;
+    private String mailPrimaryAddress;
     private String employeeNumber;
     private boolean disabled;
     private String overridePWLength;
@@ -53,11 +53,11 @@ public class UDMProperties implements Serializable {
     public void setPassword(String password) {
         this.password = password;
     }
-    public String getBirthday() {
-        return birthday;
+    public String getMailPrimaryAddress() {
+        return mailPrimaryAddress;
     }
-    public void setBirthday(String birthday) {
-        this.birthday = birthday;
+    public void setMailPrimaryAddress(String mailPrimaryAddress) {
+        this.mailPrimaryAddress = mailPrimaryAddress;
     }
     public String getEmployeeNumber() {
         return employeeNumber;
@@ -134,7 +134,7 @@ public class UDMProperties implements Serializable {
                 ", firstname='" + firstname + '\'' +
                 ", lastname='" + lastname + '\'' +
                 ", password='" + password + '\'' +
-                ", birthday='" + birthday + '\'' +
+                ", mailPrimaryAddress='" + mailPrimaryAddress + '\'' +
                 ", employeeNumber='" + employeeNumber + '\'' +
                 ", disabled='" + disabled + '\'' +
                 ", ovveridePWHistory='" + overridePWHistory + '\'' +

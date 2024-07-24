@@ -6,6 +6,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http.HttpComponent;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.jsse.TrustManagersParameters;
@@ -59,7 +60,6 @@ public class Routes extends RouteBuilder {
         httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 
         // restConfiguration().bindingMode(RestBindingMode.json);
-    
 
         from("timer:foo?repeatCount=1")
                 .log("JVM Version: ${sys.java.runtime.version}");
@@ -224,19 +224,43 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                .onException(HttpOperationFailedException.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
-                .setBody(constant(new Response("98", "ID ALREADY EXIST")))
-                .handled(true)
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .end()
+                // .onException(HttpOperationFailedException.class)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                // .setBody(constant(new Response("98", "ID ALREADY EXIST")))
+                // .handled(true)
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .end()
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                .onException(HttpOperationFailedException.class)
+                .handled(true)
+                .process(exchange -> {
+                    String body = exchange.getIn().getBody(String.class);
+                    // Extract the nested error message using JSONPath
+                    String errorMessage = exchange.getContext().resolveLanguage("jsonpath").createExpression("$.error.message").evaluate(exchange, String.class);
+
+
+                    if (errorMessage != null && errorMessage.contains("The domain part of the primary mail")) {
+                        exchange.getIn().setBody(new Response("93", "EMAIL IS NOT IN THE LIST OF MAIL DOMAINS"));
+                    } else {
+                        // Preserve the original error response
+                        exchange.getIn().setBody(body);
+                    }
+                })
+                .marshal().json(JsonLibrary.Jackson)
+
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                // .setBody(constant(new Response("93", "EMAIL IS NOT IN THE LIST OF MAIL
+                // DOMAINS")))
+  
                 .log(("Sending response ${body}"))
                 .end()
 
@@ -425,7 +449,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                .end()
 
                 .removeHeader("Authorization")
 
@@ -494,7 +518,8 @@ public class Routes extends RouteBuilder {
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
-                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | IllegalArgumentException e) {
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException
+                            | IllegalArgumentException e) {
 
                         return new RuntimeException(e);
                     } finally {
@@ -534,7 +559,6 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
@@ -542,8 +566,6 @@ public class Routes extends RouteBuilder {
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
-
-
 
         ;
 
@@ -571,7 +593,6 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-
         ;
 
         ////////////// Reset Password Service
@@ -589,7 +610,7 @@ public class Routes extends RouteBuilder {
                         // Adding list of blocked roles
                         List<String> allowedRoles = new ArrayList<>();
                         allowedRoles.add("Administrator");
-                        
+
                         // Check if any user have allowed roles
                         boolean containsAllowedRoles = userRoles.stream()
                                 .anyMatch(group -> allowedRoles.stream().anyMatch(group::contains));
@@ -603,7 +624,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                .end()
 
                 .removeHeader("Authorization")
 
@@ -651,8 +672,7 @@ public class Routes extends RouteBuilder {
 
                         return !containsForbidden;
 
-                    }  
-                    finally {
+                    } finally {
                         // DO nothing
                     }
                 })
@@ -666,10 +686,10 @@ public class Routes extends RouteBuilder {
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
                                 // exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
-                                //         .getProperties().getBirthday().replaceAll("-", ""));
-                                "Bankmega1");
+                                // .getProperties().getBirthday().replaceAll("-", ""));
+                                "M3ga@123!");
 
-                    }finally {
+                    } finally {
                         // Do nothing
                     }
                 })
@@ -776,7 +796,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
-                .end()        
+                .end()
 
                 .removeHeader("Authorization")
 
@@ -810,12 +830,13 @@ public class Routes extends RouteBuilder {
                 .setBody(exchange -> {
                     try {
 
-                        if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0).getProperties().getPwdChangeNextLogin()){
+                        if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
+                                .getProperties().getPwdChangeNextLogin()) {
                             throw new UnauthorizedException();
 
                         }
-                        exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
 
+                        exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
 
                         String username = exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
                                 .getProperties().getUsername();
@@ -834,7 +855,8 @@ public class Routes extends RouteBuilder {
                         return new UserVerifyPassword(username);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
-                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | IllegalArgumentException e) {
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException
+                            | IllegalArgumentException e) {
                         // Do nothing
                         return null;
                     } finally {

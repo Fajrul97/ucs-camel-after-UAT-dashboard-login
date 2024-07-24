@@ -13,15 +13,16 @@ public class CreateUserTemplate implements Processor {
         String[] departmentNumber = {exchange.getIn().getHeader("departmentNumber", String.class)};
         String id = exchange.getIn().getHeader("id", String.class);
         String givenName = exchange.getIn().getHeader("givenName", String.class);
-        Date inputBirthday = new SimpleDateFormat("yyyyMMdd")
-                .parse(exchange.getIn().getHeader("birthDate", String.class));
-        String birthday = new SimpleDateFormat("yyyy-MM-dd").format(inputBirthday);
+        // String inputBirthday = new SimpleDateFormat("yyyyMMdd")
+        //         .parse(exchange.getIn().getHeader("birthDate", String.class));
+        // String birthday = new SimpleDateFormat("yyyy-MM-dd").format(inputBirthday);
+        String mailPrimaryAddress = exchange.getIn().getHeader("email", String.class);
+        String password = exchange.getIn().getHeader("password", String.class);
         String displayName = exchange.getIn().getHeader("displayName", String.class);
 
         UDMObject userTemplate = new UDMObject("users/user", departmentNumber,
                 false, null, null, true, id,
-                "", givenName, birthday, null, displayName,
-                new SimpleDateFormat("yyyyMMdd").format(inputBirthday), null);
+                "", givenName, mailPrimaryAddress, null, displayName, password, null);
 
         exchange.getIn().setBody(userTemplate);
     }
