@@ -1,5 +1,6 @@
 package org.i3mid;
 
+import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
@@ -241,21 +242,8 @@ public class Routes extends RouteBuilder {
                 .end()
 
                 .onException(HttpOperationFailedException.class)
-                .handled(true)
-                .process(exchange -> {
-                    String body = exchange.getIn().getBody(String.class);
-                    // Extract the nested error message using JSONPath
-                    String errorMessage = exchange.getContext().resolveLanguage("jsonpath").createExpression("$.error.message").evaluate(exchange, String.class);
-
-
-                    if (errorMessage != null && errorMessage.contains("The domain part of the primary mail")) {
-                        exchange.getIn().setBody(new Response("93", "EMAIL IS NOT IN THE LIST OF MAIL DOMAINS"));
-                    } else {
-                        // Preserve the original error response
-                        exchange.getIn().setBody(body);
-                    }
-                })
-                .marshal().json(JsonLibrary.Jackson)
+                .transform().simple("${exception.message}")
+                // .onWhen(${exception.message}.contains("mail"))
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
                 // .setBody(constant(new Response("93", "EMAIL IS NOT IN THE LIST OF MAIL
