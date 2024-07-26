@@ -2,6 +2,7 @@ package org.i3mid.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -15,6 +16,8 @@ public class UDMProperties implements Serializable {
     private String lastname;
     private String password;
     private String mailPrimaryAddress;
+    @JsonProperty("e-mail")
+    private String[] email;
     private String employeeNumber;
     private boolean disabled;
     private String overridePWLength;
@@ -58,6 +61,12 @@ public class UDMProperties implements Serializable {
     }
     public void setMailPrimaryAddress(String mailPrimaryAddress) {
         this.mailPrimaryAddress = mailPrimaryAddress;
+    }
+    public String[] getEmail() {
+        return email;
+    }
+    public void setEmail(String[] email) {
+        this.email = email;
     }
     public String getEmployeeNumber() {
         return employeeNumber;
@@ -135,6 +144,7 @@ public class UDMProperties implements Serializable {
                 ", lastname='" + lastname + '\'' +
                 ", password='" + password + '\'' +
                 ", mailPrimaryAddress='" + mailPrimaryAddress + '\'' +
+                ", e-mail='" + email + '\'' +
                 ", employeeNumber='" + employeeNumber + '\'' +
                 ", disabled='" + disabled + '\'' +
                 ", ovveridePWHistory='" + overridePWHistory + '\'' +

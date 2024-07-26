@@ -26,7 +26,7 @@ public class UDMObject implements Serializable {
     }
     public UDMObject(String objectType, String[] departmentNumber, boolean disabled,
                      String overridePWLength, String organisation, boolean pwdChangeNextLogin,
-                     String username, String firstname, String lastname, String mailPrimaryAddress,
+                     String username, String firstname, String lastname, String mailPrimaryAddress, String[] email,
                      String employeeNumber, String displayName, String password,
                      String passwordexpiry) {
         this.objectType = objectType;
@@ -40,6 +40,7 @@ public class UDMObject implements Serializable {
         properties.setFirstname(firstname);
         properties.setLastname(lastname);
         properties.setMailPrimaryAddress(mailPrimaryAddress);
+        properties.setEmail(email);
         properties.setEmployeeNumber(employeeNumber);
         properties.setDisplayName(displayName);
         properties.setPassword(password);

@@ -44,6 +44,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 public class Routes extends RouteBuilder {
@@ -218,6 +219,8 @@ public class Routes extends RouteBuilder {
 
                 .toD("{{ucs.baseUrl}}/univention/udm/users/user/")
 
+                // .log("${exception.message}")
+
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
                 .removeHeaders("Camel*")
@@ -225,30 +228,40 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                // .onException(HttpOperationFailedException.class)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
-                // .setBody(constant(new Response("98", "ID ALREADY EXIST")))
-                // .handled(true)
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .end()
+                .onException(HttpOperationFailedException.class)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                .setBody(exchange -> {
+                    try {
+                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                        String responseBody = exception.getResponseBody();
+                        
+                        if (responseBody.contains("The domain part of the primary mail address")) {
+                            return new Response("10", "EMAIL DOMAIN UNIDENTIFIED");
+                        } else if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters"))) {
+                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL AND 1 NUMBER");
+                        } else if (responseBody.contains("password is too short")) {
+                            return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
+                        } 
+
+                        return new Response("98", "ID ALREADY EXIST");
+                        
+                    } catch (Exception e) {
+
+                        return new RuntimeException(e);
+                    } finally {
+                        // Do nothing
+                    }
+                })
+                .handled(true)
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .end()
-
-                .onException(HttpOperationFailedException.class)
-                .transform().simple("${exception.message}")
-                // .onWhen(${exception.message}.contains("mail"))
-
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
-                // .setBody(constant(new Response("93", "EMAIL IS NOT IN THE LIST OF MAIL
-                // DOMAINS")))
-  
                 .log(("Sending response ${body}"))
                 .end()
 
@@ -501,7 +514,7 @@ public class Routes extends RouteBuilder {
 
                         // process decryption
                         String password = new String(AESEncryptionUtil
-                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -573,13 +586,42 @@ public class Routes extends RouteBuilder {
                 .end()
 
                 .onException(HttpOperationFailedException.class)
-                .onWhen(exceptionMessage().contains("statusCode: 422"))
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
+                .setBody(exchange -> {
+                    try {
+                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                        String responseBody = exception.getResponseBody();
+                        System.out.println(responseBody);
+                        
+                       if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters"))) {
+                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL AND 1 NUMBER");
+                        } else if (responseBody.contains("password is too short")) {
+                            return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
+                        } 
+
+                        return new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED");
+                        
+                    } catch (Exception e) {
+
+                        return new RuntimeException(e);
+                    } finally {
+                        // Do nothing
+                    }
+                })
                 .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
+
+
+                // .onException(HttpOperationFailedException.class)
+                // .onWhen(exceptionMessage().contains("statusCode: 422"))
+                // .handled(true)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .end()
 
         ;
 

@@ -32,6 +32,8 @@ public class ChangePasswordRequest implements Serializable {
         properties.setUsername(userInput.get_embedded().getUdmobject().get(0).getId());
         properties.setPassword(newPassword);
         this.properties = properties;
+
+        System.out.println("test");
        
     }
 
