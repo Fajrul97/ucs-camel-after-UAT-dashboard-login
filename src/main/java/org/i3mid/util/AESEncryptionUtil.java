@@ -57,12 +57,14 @@ public class AESEncryptionUtil {
 
     public static void main(String[] args) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         //untuk encrypt
-        // System.out.println(Base64.getEncoder().encodeToString(encrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "blackpink")));
-        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2023020")));
-        // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "20230202")));
+        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "M3ga@123!")));
+        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2023aBC!")));
+        // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "M3ga@123!")));
+        // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "2023aBC!")));
         //untuk decrypt
-        // System.out.println(new String(decrypt("abcdefgh12344321abcdefgh12344321".getBytes(), "hlsfoBMnJ7HR2Xwh+37mvg==")));
-        System.out.println(new String(decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "fizbqDcVxNNr7g+v1p9NlQ==")));
+        // System.out.println(new String(decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "fizbqDcVxNNr7g+v1p9NlQ==")));
+        // System.out.println(new String(decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "KnBwqGusLQ48F0lxBGOW0w==")));
+
     }
     
 }

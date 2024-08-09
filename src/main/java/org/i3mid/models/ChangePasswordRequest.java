@@ -33,7 +33,7 @@ public class ChangePasswordRequest implements Serializable {
         properties.setPassword(newPassword);
         this.properties = properties;
 
-        System.out.println("test");
+        // System.out.println("test");
        
     }
 

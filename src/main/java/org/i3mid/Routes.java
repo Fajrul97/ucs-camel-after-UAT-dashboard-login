@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.util.Constant;
+import io.netty.util.internal.StringUtil;
 import io.quarkus.security.UnauthorizedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import javax.crypto.BadPaddingException;
@@ -141,7 +142,7 @@ public class Routes extends RouteBuilder {
                     try {
                         return new UserOutput(exchange.getIn().getBody(UserInput.class));
                     } catch (ResultMoreThanOneException | ResultNotFoundException e) {
-                        System.out.println(e.getClass());
+                        // System.out.println(e.getClass());
                         throw new RuntimeException(e);
                     }
                 })
@@ -235,15 +236,17 @@ public class Routes extends RouteBuilder {
                         HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
                         String responseBody = exception.getResponseBody();
                         
-                        if (responseBody.contains("The domain part of the primary mail address")) {
-                            return new Response("10", "EMAIL DOMAIN UNIDENTIFIED");
-                        } else if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters"))) {
-                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL AND 1 NUMBER");
+                        if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters")) ||
+                        (responseBody.contains("is too simple"))) {
+                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
                         } else if (responseBody.contains("password is too short")) {
                             return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
-                        } 
-
-                        return new Response("98", "ID ALREADY EXIST");
+                        } else if (responseBody.contains("The domain part of the primary mail address")) {
+                            return new Response("13", "EMAIL DOMAIN UNIDENTIFIED");
+                        } else if (responseBody.contains("The mail address is already in use")) {
+                            return new Response("14", "EMAIL ALREADY IN USE");
+                        }
+                        return new Response("98", "ID ALREADY EXIST/MISSING PARAMETERS");
                         
                     } catch (Exception e) {
 
@@ -515,6 +518,7 @@ public class Routes extends RouteBuilder {
                         // process decryption
                         String password = new String(AESEncryptionUtil
                                 .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                // .decrypt("{{encryptionKey.dev}}".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -593,8 +597,9 @@ public class Routes extends RouteBuilder {
                         String responseBody = exception.getResponseBody();
                         System.out.println(responseBody);
                         
-                       if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters"))) {
-                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL AND 1 NUMBER");
+                       if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters")) || 
+                       (responseBody.contains("is too simple"))) {
+                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
                         } else if (responseBody.contains("password is too short")) {
                             return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
                         } 
@@ -873,8 +878,15 @@ public class Routes extends RouteBuilder {
                         String encryptedPassword = exchange.getIn().getHeader("password", String.class).replaceAll(" ",
                                 "+");
 
+                                if (StringUtil.isNullOrEmpty(encryptedPassword)) {
+                                    throw new NullPointerException();
+                                }
+
                         String password = new String(AESEncryptionUtil
-                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                // .decrypt("{{encryptionKey.dev}}".getBytes(), encryptedPassword));
+
+                        
 
                         String concat = username + ":" + password;
                         exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
@@ -920,6 +932,14 @@ public class Routes extends RouteBuilder {
                 .handled(true)
                 .end()
 
+                .onException(NullPointerException.class)
+                .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setBody(constant(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
@@ -939,8 +959,17 @@ public class Routes extends RouteBuilder {
 
                 .log(("Sending response ${body}"))
 
+                // .onException(HttpOperationFailedException.class)
+                // .onWhen(exceptionMessage().not().contains("statusCode: 401"))
+                // .handled(true)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                // .setBody(constant(new Response("00", "SUCCESS")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .end()
+
                 .onException(HttpOperationFailedException.class)
-                .onWhen(exceptionMessage().not().contains("statusCode: 401"))
+                .onWhen(exchangeProperty(Exchange.EXCEPTION_CAUGHT).convertToString().regex(".*statusCode: (200|403|405).*"))
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
