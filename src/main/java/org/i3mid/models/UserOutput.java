@@ -24,7 +24,11 @@ public class UserOutput {
     private String ACL;
     private String displayName;
     private String passwordExpirationTime;
+    private String email;
+    private String id;
+    private String position;
     
+
     public UserOutput(UserInput userInput) throws ResultMoreThanOneException, ResultNotFoundException {
         // System.out.println("Result = " + userInput.getResults());
         if (userInput.getResults() == 1 ) {
@@ -46,6 +50,9 @@ public class UserOutput {
             this.ACL = userObject.getProperties().getDn();
             this.displayName = userObject.getProperties().getDisplayName();
             this.passwordExpirationTime = userObject.getProperties().getPasswordexpiry();
+            this.email = userObject.getProperties().getMailPrimaryAddress();
+            this.id = userObject.getId();
+            this.position = userObject.getPosition();
         } else if (userInput.getResults() == 0) {
             throw new ResultNotFoundException("User queried is not found");
         } else if (userInput.getResults() > 1) {
@@ -156,6 +163,25 @@ public class UserOutput {
     public void setPasswordExpirationTime(String passwordExpirationTime) {
         this.passwordExpirationTime = passwordExpirationTime;
     }
+    public String getEmail() {
+        return email;
+    }
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    public String getId() {
+        return id;
+    }
+    public void setId(String id) {
+        this.id = id;
+    }
+    public String getPosition() {
+        return position;
+    }
+    public void setPosition(String position) {
+        this.position = position;
+    }
+
 
     @Override
     public String toString() {
@@ -177,6 +203,7 @@ public class UserOutput {
                 ", ACL='" + ACL + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", passwordExpirationTime='" + passwordExpirationTime + '\'' +
+                ", email='" + email + '\'' +
                 '}';
     }
 }

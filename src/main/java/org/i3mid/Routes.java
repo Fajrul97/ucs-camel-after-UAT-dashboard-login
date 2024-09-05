@@ -220,8 +220,6 @@ public class Routes extends RouteBuilder {
 
                 .toD("{{ucs.baseUrl}}/univention/udm/users/user/")
 
-                // .log("${exception.message}")
-
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
                 .removeHeaders("Camel*")
@@ -517,8 +515,8 @@ public class Routes extends RouteBuilder {
 
                         // process decryption
                         String password = new String(AESEncryptionUtil
-                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                                // .decrypt("{{encryptionKey.dev}}".getBytes(), encryptedPassword));
+                                // .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -617,16 +615,6 @@ public class Routes extends RouteBuilder {
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
-
-
-                // .onException(HttpOperationFailedException.class)
-                // .onWhen(exceptionMessage().contains("statusCode: 422"))
-                // .handled(true)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                // .setBody(constant(new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .end()
 
         ;
 
@@ -883,8 +871,9 @@ public class Routes extends RouteBuilder {
                                 }
 
                         String password = new String(AESEncryptionUtil
-                                .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                                // .decrypt("{{encryptionKey.dev}}".getBytes(), encryptedPassword));
+                                // .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
+                                .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                                
 
                         
 
