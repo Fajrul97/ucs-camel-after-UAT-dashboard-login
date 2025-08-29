@@ -4,10 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.Base64;
-import java.util.Calendar;
-import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -58,9 +55,9 @@ public class AESEncryptionUtil {
     public static void main(String[] args) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         //untuk encrypt
         // System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "M3ga@123!")));
-        // System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2023ABc!")));
+        System.out.println(Base64.getEncoder().encodeToString(encrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2024Abc!")));
         // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "M3ga@123!")));
-        System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "2024aBc!")));
+        // System.out.println(Base64.getEncoder().encodeToString(encrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "2023Abc!")));
         //untuk decrypt
         // System.out.println(new String(decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "fizbqDcVxNNr7g+v1p9NlQ==")));
         // System.out.println(new String(decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "v4ykq19dXtFuvLfgUAns4g==")));

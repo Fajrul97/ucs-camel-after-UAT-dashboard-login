@@ -1,14 +1,28 @@
 package org.i3mid;
 
-import org.apache.camel.Body;
+import java.net.Socket;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
+
 import org.apache.camel.Exchange;
-import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http.HttpComponent;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
-import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.jsse.TrustManagersParameters;
 import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
@@ -23,29 +37,11 @@ import org.i3mid.process.CreateUserTemplate;
 import org.i3mid.util.AESEncryptionUtil;
 import org.i3mid.util.JWTProcessor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.netty.util.Constant;
-import io.netty.util.internal.StringUtil;
-import io.quarkus.security.UnauthorizedException;
+import io.quarkus.runtime.util.StringUtil;
 import jakarta.enterprise.context.ApplicationScoped;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.X509ExtendedTrustManager;
-import java.net.Socket;
-import java.nio.file.AccessDeniedException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
 
 @ApplicationScoped
 public class Routes extends RouteBuilder {
@@ -231,12 +227,15 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
                 .setBody(exchange -> {
                     try {
-                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT,
+                                HttpOperationFailedException.class);
                         String responseBody = exception.getResponseBody();
-                        
-                        if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters")) ||
-                        (responseBody.contains("is too simple"))) {
-                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
+
+                        if (responseBody.contains("it is too simplistic/systematic")
+                                || (responseBody.contains("it does not contain enough DIFFERENT characters")) ||
+                                (responseBody.contains("is too simple"))) {
+                            return new Response("11",
+                                    "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
                         } else if (responseBody.contains("password is too short")) {
                             return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
                         } else if (responseBody.contains("The domain part of the primary mail address")) {
@@ -245,7 +244,7 @@ public class Routes extends RouteBuilder {
                             return new Response("14", "EMAIL ALREADY IN USE");
                         }
                         return new Response("98", "ID ALREADY EXIST/MISSING PARAMETERS");
-                        
+
                     } catch (Exception e) {
 
                         return new RuntimeException(e);
@@ -516,7 +515,7 @@ public class Routes extends RouteBuilder {
                         // process decryption
                         String password = new String(AESEncryptionUtil
                                 .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                                // .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                        // .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -530,6 +529,7 @@ public class Routes extends RouteBuilder {
                     }
                 })
                 .marshal().json()
+                // .log("Change password payload: ${body}")
                 .to("direct:changePasswordService")
                 .when(exchange -> {
                     try {
@@ -591,19 +591,22 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(422))
                 .setBody(exchange -> {
                     try {
-                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT,
+                                HttpOperationFailedException.class);
                         String responseBody = exception.getResponseBody();
-                        System.out.println(responseBody);
-                        
-                       if (responseBody.contains("it is too simplistic/systematic") || (responseBody.contains("it does not contain enough DIFFERENT characters")) || 
-                       (responseBody.contains("is too simple"))) {
-                            return new Response("11", "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
+                        // System.out.println(responseBody);
+
+                        if (responseBody.contains("it is too simplistic/systematic")
+                                || (responseBody.contains("it does not contain enough DIFFERENT characters")) ||
+                                (responseBody.contains("is too simple"))) {
+                            return new Response("11",
+                                    "PASSWORD MUST CONTAIN 1 UPPERCASE, 1 LOWER CASE, 1 SYMBOL,1 NUMBER AND MUST HAVE A CHARACTER OR SYMBOL BETWEEN 5 DIGIT NUMBERS");
                         } else if (responseBody.contains("password is too short")) {
                             return new Response("12", "PASSWORD MUST CONTAIN AT LEAST 8 CHARACTERS");
-                        } 
+                        }
 
                         return new Response("96", "INVALID ENCRYPTION ALGORITHM/PASSWORD ALREADY USED");
-                        
+
                     } catch (Exception e) {
 
                         return new RuntimeException(e);
@@ -853,11 +856,11 @@ public class Routes extends RouteBuilder {
                 .setBody(exchange -> {
                     try {
 
-                        if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
-                                .getProperties().getPwdChangeNextLogin()) {
-                            throw new UnauthorizedException();
+                        // if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
+                        //         .getProperties().getPwdChangeNextLogin()) {
+                        //     throw new UnauthorizedException();
 
-                        }
+                        // }
 
                         exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
 
@@ -866,30 +869,32 @@ public class Routes extends RouteBuilder {
                         String encryptedPassword = exchange.getIn().getHeader("password", String.class).replaceAll(" ",
                                 "+");
 
-                                if (StringUtil.isNullOrEmpty(encryptedPassword)) {
-                                    throw new NullPointerException();
-                                }
+                        if (StringUtil.isNullOrEmpty(encryptedPassword)) {
+                            throw new IllegalArgumentException();
+                        }
+                        
+                        // System.out.println("Encrypted Password: " + encryptedPassword);
 
                         String password = new String(AESEncryptionUtil
                                 .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                                // .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
-                                
+                        // .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
 
-                        
+                        // String concat = username + ":" + password;
+                        // exchange.setProperty("auth", "Basic " +
+                        // Base64.getEncoder().encodeToString(concat.getBytes()));
 
-                        String concat = username + ":" + password;
-                        exchange.setProperty("auth", "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
+                        // exchange.getIn().setHeader("Authorization",
+                        // "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
 
-                        exchange.getIn().setHeader("Authorization",
-                                "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
+                        exchange.setProperty("username", username);
+                        exchange.setProperty("password", password);
 
                         return new UserVerifyPassword(username);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
-                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException
-                            | IllegalArgumentException e) {
+                            | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | NullPointerException e) {
                         // Do nothing
-                        return null;
+                        throw new IllegalArgumentException();
                     } finally {
                         // Do nothing
                     }
@@ -913,15 +918,16 @@ public class Routes extends RouteBuilder {
                 .log(("Sending response ${body}"))
                 .end()
 
-                .onException(UnauthorizedException.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("94", "MUST CHANGE PASSWORD AFTER CREATE USER")))
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .handled(true)
-                .end()
+                // .onException(UnauthorizedException.class)
+                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                // .setBody(constant(new Response("94", "MUST CHANGE PASSWORD AFTER CREATE
+                // USER")))
+                // .marshal().json()
+                // .log(("Sending response ${body}"))
+                // .handled(true)
+                // .end()
 
-                .onException(NullPointerException.class)
+                .onException(IllegalArgumentException.class)
                 .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
@@ -941,15 +947,31 @@ public class Routes extends RouteBuilder {
 
         from("direct:verifyPasswordService")
                 .removeHeaders("Camel*")
-                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
-                .setHeader("Content-Type", constant("application/json"))
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("Content-Type", constant("application/x-www-form-urlencoded"))
+                .setBody(exchange -> {
+                    String username = exchange.getProperty("username", String.class);
+                    String password = exchange.getProperty("password", String.class);
+                    return "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)
+                            + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8);
+                })
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl}}/univention/auth")
 
-                .log(("Sending response ${body}"))
+                // .log(("Sending response ${body}"))
 
                 // .onException(HttpOperationFailedException.class)
                 // .onWhen(exceptionMessage().not().contains("statusCode: 401"))
+                // .handled(true)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+                .setBody(constant(new Response("00", "SUCCESS")))
+                .marshal().json()
+                .log(("Sending response ${body}"))
+                .end()
+
+                // .onException(HttpOperationFailedException.class)
+                // .onWhen(exchangeProperty(Exchange.EXCEPTION_CAUGHT).convertToString()
+                // .regex(".*statusCode: (200|403|405).*"))
                 // .handled(true)
                 // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 // .setBody(constant(new Response("00", "SUCCESS")))
@@ -958,19 +980,29 @@ public class Routes extends RouteBuilder {
                 // .end()
 
                 .onException(HttpOperationFailedException.class)
-                .onWhen(exchangeProperty(Exchange.EXCEPTION_CAUGHT).convertToString().regex(".*statusCode: (200|403|405).*"))
                 .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-                .setBody(constant(new Response("00", "SUCCESS")))
-                .marshal().json()
-                .log(("Sending response ${body}"))
-                .end()
+                .process(exchange -> {
+                    HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT,
+                            HttpOperationFailedException.class);
+                    String responseBody = cause.getResponseBody();
 
-                .onException(HttpOperationFailedException.class)
-                .onWhen(exceptionMessage().contains("statusCode: 401"))
-                .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(constant(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
+                    // Parse JSON body
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode json = mapper.readTree(responseBody);
+
+                    String message = json.path("message").asText();
+                    boolean passwordExpired = json.path("result").path("password_expired").asBoolean(false);
+
+                    if (passwordExpired) {
+                        // user baru / password expired
+                        exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, 401);
+                        exchange.getIn().setBody(new Response("94", "MUST CHANGE PASSWORD AFTER CREATE USER"));
+                    } else {
+                        // password salah atau user tidak ada
+                        exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, 401);
+                        exchange.getIn().setBody(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM"));
+                    }
+                })
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
