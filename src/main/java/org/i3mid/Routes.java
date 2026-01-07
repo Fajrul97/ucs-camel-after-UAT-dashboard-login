@@ -7,6 +7,7 @@ import java.nio.file.AccessDeniedException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.ProviderException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.List;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 
@@ -130,7 +132,7 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -214,7 +216,7 @@ public class Routes extends RouteBuilder {
 
                 .marshal().json()
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/")
+                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/")
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
@@ -312,7 +314,7 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -410,7 +412,7 @@ public class Routes extends RouteBuilder {
 
                 .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
@@ -466,7 +468,7 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -507,15 +509,36 @@ public class Routes extends RouteBuilder {
                         String body = exchange.getIn()
                                 .getBody(UserInput.class).get_embedded().getUdmobject().get(0).getDn().toString()
                                 .replaceAll(",", "%2C");
+
                         exchange.setProperty("MyBodyProperty", body.toString());
 
                         String encryptedPassword = exchange.getIn().getHeader("newPassword", String.class)
                                 .replaceAll(" ", "+");
 
+                        String version = exchange.getIn().getHeader("X-ENCRYPT-VERSION", String.class);
+
                         // process decryption
-                        String password = new String(AESEncryptionUtil
-                                // .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                        .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
+                        //DEV
+                        String secretKeyCBC = "Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7";
+                        String secretKeyGCM = "ynII0uhPhWE9ZnCda8T7oPYptlvw0pVM";
+
+                        //PROD
+                        // String secretKeyCBC = "9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah";
+                        // String secretKeyGCM = "mXt&jfH^egHjbwK9Mn%Bbrrr*hGj&PoD";
+
+                        String password = null;
+
+                        try {
+                            if ("v0.2".equalsIgnoreCase(version)) {
+                                password = new String(AESEncryptionUtil.decryptGCM(secretKeyGCM.getBytes(StandardCharsets.UTF_8), encryptedPassword));
+                            } else {
+                                password = new String(AESEncryptionUtil.decryptCBC(secretKeyCBC.getBytes(StandardCharsets.UTF_8), encryptedPassword));
+                            }
+                        } catch (ProviderException e) {
+                            if (e.getCause() instanceof ShortBufferException) {
+                                throw new IllegalArgumentException();
+                            }
+                        }
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class), password);
 
@@ -525,11 +548,10 @@ public class Routes extends RouteBuilder {
 
                         return new RuntimeException(e);
                     } finally {
-                        // Do nothing
+                    
                     }
                 })
                 .marshal().json()
-                // .log("Change password payload: ${body}")
                 .to("direct:changePasswordService")
                 .when(exchange -> {
                     try {
@@ -538,7 +560,7 @@ public class Routes extends RouteBuilder {
 
                         return containsForbidden != null;
                     } finally {
-                        // DO nothing
+                    
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
@@ -553,7 +575,7 @@ public class Routes extends RouteBuilder {
                         }
                         return false;
                     } finally {
-                        // DO nothing
+                    
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
@@ -579,7 +601,7 @@ public class Routes extends RouteBuilder {
 
                 .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
@@ -611,7 +633,7 @@ public class Routes extends RouteBuilder {
 
                         return new RuntimeException(e);
                     } finally {
-                        // Do nothing
+                    
                     }
                 })
                 .handled(true)
@@ -646,7 +668,7 @@ public class Routes extends RouteBuilder {
                         return !containsAllowedRoles;
 
                     } finally {
-                        // DO nothing
+                    
                     }
                 })
                 .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
@@ -666,7 +688,7 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -684,7 +706,6 @@ public class Routes extends RouteBuilder {
 
                         // Adding list of blocked group
                         List<String> forbiddenStrings = new ArrayList<>();
-                        // forbiddenStrings.add("Computers");
                         forbiddenStrings.add("Domain Admins");
                         forbiddenStrings.add("Administrators");
                         forbiddenStrings.add("ITSEC");
@@ -711,8 +732,6 @@ public class Routes extends RouteBuilder {
                         exchange.setProperty("MyBodyProperty", body.toString());
 
                         return new ChangePasswordRequest(exchange.getIn().getBody(UserInput.class),
-                                // exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
-                                // .getProperties().getBirthday().replaceAll("-", ""));
                                 "M3ga@123!");
 
                     } finally {
@@ -772,7 +791,7 @@ public class Routes extends RouteBuilder {
 
                 .setHeader("Authorization", constant("{{ucs.basic64}}"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
 
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
@@ -818,7 +837,7 @@ public class Routes extends RouteBuilder {
                         return !containsAllowedRoles;
 
                     } finally {
-                        // DO nothing
+                        
                     }
                 })
                 .throwException(new AccessDeniedException("This User doesnt have allowed roles"))
@@ -838,7 +857,7 @@ public class Routes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
 
-                .toD("{{ucs.baseUrl}}/univention/udm/users/user/?query[uid]=${header.id}" +
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
                         "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
@@ -850,53 +869,59 @@ public class Routes extends RouteBuilder {
                         }
                         return false;
                     } finally {
-                        // DO nothing
+                        
                     }
                 })
                 .setBody(exchange -> {
                     try {
-
-                        // if (exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
-                        //         .getProperties().getPwdChangeNextLogin()) {
-                        //     throw new UnauthorizedException();
-
-                        // }
-
                         exchange.setProperty("MyBodyProperty", exchange.getIn().getHeader("id", String.class));
 
                         String username = exchange.getIn().getBody(UserInput.class).get_embedded().getUdmobject().get(0)
                                 .getProperties().getUsername();
                         String encryptedPassword = exchange.getIn().getHeader("password", String.class).replaceAll(" ",
                                 "+");
+                        String version = exchange.getIn().getHeader("X-ENCRYPT-VERSION", String.class);
 
                         if (StringUtil.isNullOrEmpty(encryptedPassword)) {
                             throw new IllegalArgumentException();
                         }
+
+                        //proses decryption
+                        //DEV
+                        String secretKeyCBC = "Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7";
+                        String secretKeyGCM = "ynII0uhPhWE9ZnCda8T7oPYptlvw0pVM";
+
+                        //PROD
+                        // String secretKeyCBC = "9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah";
+                        // String secretKeyGCM = "mXt&jfH^egHjbwK9Mn%Bbrrr*hGj&PoD";
+
+                        String password;
+
+                        try {
+                            if ("v0.2".equalsIgnoreCase(version)) {
+                                password = new String(AESEncryptionUtil.decryptGCM(secretKeyGCM.getBytes(StandardCharsets.UTF_8), encryptedPassword));
+                            } else {
+                                password = new String(AESEncryptionUtil.decryptCBC(secretKeyCBC.getBytes(StandardCharsets.UTF_8), encryptedPassword));
+                            }
+                            exchange.setProperty("password", password);
+                        } catch (ProviderException e) {
+                            if (e.getCause() instanceof ShortBufferException) {
+                                throw new IllegalArgumentException();
+                            }
+                        }
+                            
                         
-                        // System.out.println("Encrypted Password: " + encryptedPassword);
-
-                        String password = new String(AESEncryptionUtil
-                                // .decrypt("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), encryptedPassword));
-                        .decrypt("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), encryptedPassword));
-
-                        // String concat = username + ":" + password;
-                        // exchange.setProperty("auth", "Basic " +
-                        // Base64.getEncoder().encodeToString(concat.getBytes()));
-
-                        // exchange.getIn().setHeader("Authorization",
-                        // "Basic " + Base64.getEncoder().encodeToString(concat.getBytes()));
 
                         exchange.setProperty("username", username);
-                        exchange.setProperty("password", password);
-
+                        
                         return new UserVerifyPassword(username);
 
                     } catch (InvalidKeyException | InvalidAlgorithmParameterException | NoSuchAlgorithmException
                             | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | NullPointerException e) {
-                        // Do nothing
+                
                         throw new IllegalArgumentException();
                     } finally {
-                        // Do nothing
+                        
                     }
                 })
                 .marshal().json()
@@ -909,7 +934,7 @@ public class Routes extends RouteBuilder {
                         }
                         return false;
                     } finally {
-                        // DO nothing
+                        
                     }
                 })
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
@@ -917,15 +942,6 @@ public class Routes extends RouteBuilder {
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
-
-                // .onException(UnauthorizedException.class)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                // .setBody(constant(new Response("94", "MUST CHANGE PASSWORD AFTER CREATE
-                // USER")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .handled(true)
-                // .end()
 
                 .onException(IllegalArgumentException.class)
                 .handled(true)
@@ -956,28 +972,13 @@ public class Routes extends RouteBuilder {
                             + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8);
                 })
 
-                .toD("{{ucs.baseUrl}}/univention/auth")
+                .toD("{{ucs.baseUrl.write}}/univention/auth")
 
-                // .log(("Sending response ${body}"))
-
-                // .onException(HttpOperationFailedException.class)
-                // .onWhen(exceptionMessage().not().contains("statusCode: 401"))
-                // .handled(true)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
                 .log(("Sending response ${body}"))
                 .end()
-
-                // .onException(HttpOperationFailedException.class)
-                // .onWhen(exchangeProperty(Exchange.EXCEPTION_CAUGHT).convertToString()
-                // .regex(".*statusCode: (200|403|405).*"))
-                // .handled(true)
-                // .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-                // .setBody(constant(new Response("00", "SUCCESS")))
-                // .marshal().json()
-                // .log(("Sending response ${body}"))
-                // .end()
 
                 .onException(HttpOperationFailedException.class)
                 .handled(true)
