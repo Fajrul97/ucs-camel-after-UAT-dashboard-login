@@ -21,7 +21,7 @@ public class ChangePasswordRequest implements Serializable {
     public ChangePasswordRequest(UserInput userInput, String newPassword) {
         this.uuid = userInput.get_embedded().getUdmobject().get(0).getUuid();
         this.position = userInput.get_embedded().getUdmobject().get(0).getPosition();
-        this.uri = "https://10.8.60.89/univention/udm/users/passwd/" + this.position;
+        this.uri = "{{ucs.baseUrl.write}}/univention/udm/users/passwd/" + this.position;
             ObjectMapper mapper = new ObjectMapper();
 
         this.options= mapper.createObjectNode();
