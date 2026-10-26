@@ -14,6 +14,7 @@ import io.jsonwebtoken.io.IOException;
 
 public class JWTProcessor implements Processor {
 
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -29,15 +30,12 @@ public class JWTProcessor implements Processor {
             byte[] decodedBytes = java.util.Base64.getUrlDecoder().decode(payload);
             String decodedPayload = new String(decodedBytes);
 
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode payloadJson = null;
             try {
                 payloadJson = mapper.readTree(decodedPayload);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            // System.out.println(payloadJson);
 
             if (payloadJson != null && payloadJson.has("realm_access")) {
             JsonNode realmAccess = payloadJson.get("realm_access");
@@ -47,14 +45,14 @@ public class JWTProcessor implements Processor {
 
             exchange.setProperty("userRole", rolesList);
 
-            System.out.println("User Roles: " + rolesList);
+            // System.out.println("User Roles: " + rolesList);
             } 
             else {
-            System.out.println("No roles found in the 'realm_access' claim.");
+            // System.out.println("No roles found in the 'realm_access' claim.");
             }
             } 
             else {
-            System.out.println("No 'realm_access' claim found in the token.");
+            // System.out.println("No 'realm_access' claim found in the token.");
             }
         }
     }

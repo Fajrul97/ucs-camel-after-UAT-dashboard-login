@@ -114,14 +114,14 @@ public class AESEncryptionUtil {
     public static void main(String[] args) throws InvalidKeyException, InvalidAlgorithmParameterException,
             NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         // untuk encryptCBC
-        System.out.println("Encrypted CBC: " + Base64.getEncoder().encodeToString(encryptCBC("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2021Abc!")));
+        System.out.println("Encrypted CBC: " + Base64.getEncoder().encodeToString(encryptCBC("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "2023Abc!")));
         // System.out.println("Encrypted CBC: " + Base64.getEncoder().encodeToString(encryptCBC("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "2023Abc!")));
         // untuk decryptCBC
         // System.out.println("Decrypted CBC: " + new String(decryptCBC("Q8zU$&R&P3DoQyff^R&AA*t$!EAZ%FD7".getBytes(), "H6cfUZPzzIsCTNMBhBULKw==")));
         // System.out.println("Decrypted CBC: " + new String(decryptCBC("9Y@ov#XLt@bNN@We^fqDypo%v5vv$7Ah".getBytes(), "v4ykq19dXtFuvLfgUAns4g==")));
 
         // untuk encryptGCM
-        String encrypted = encryptGCM("ynII0uhPhWE9ZnCda8T7oPYptlvw0pVM".getBytes(), "2021Abc!");
+        String encrypted = encryptGCM("ynII0uhPhWE9ZnCda8T7oPYptlvw0pVM".getBytes(), "2023Abc!");
         System.out.println("Encrypted GCM: " + encrypted);
         // untuk decryptGCM
         // String decrypted = decryptGCM("ynII0uhPhWE9ZnCda8T7oPYptlvw0pVM".getBytes(),"qN8HLnpfqT58qVGNqmXy465rrZ9GyQsI4C/BJe/sT2ETIptqT97SCA==");
