@@ -59,11 +59,11 @@ public class SearchUserRoute extends RouteBuilder {
 
                 .removeHeaders("Camel*")
 
-                .log("Received request from method=${header.HttpMethod}, " +
-                        "path=${header.HttpPath}, " +
-                        "url=${header.HttpUrl}, " +
-                        "localAddress=${header.HttpLocalAddress}, " +
-                        "remoteAddress=${header.HttpRemoteAddress}")
+                // .log("Received request from method=${header.HttpMethod}, " +
+                // "path=${header.HttpPath}, " +
+                // "url=${header.HttpUrl}, " +
+                // "localAddress=${header.HttpLocalAddress}, " +
+                // "remoteAddress=${header.HttpRemoteAddress}")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
@@ -95,18 +95,24 @@ public class SearchUserRoute extends RouteBuilder {
                 })
                 .marshal().json()
 
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
 
                 .onException(AccessDeniedException.class)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
+                // .log(("Sending response ${body}"))
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body}")
                 .end()
 
                 .onException(ResultNotFoundException.class)
@@ -114,11 +120,17 @@ public class SearchUserRoute extends RouteBuilder {
                 .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
         ;

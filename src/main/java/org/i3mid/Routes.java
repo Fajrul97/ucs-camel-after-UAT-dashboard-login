@@ -42,6 +42,12 @@ public class Routes extends RouteBuilder {
                                 .get().to("direct:restService");
 
                 from("direct:restService")
+
+                                .setProperty("reqInfo", simple(
+                                        "method=${header.CamelHttpMethod}, path=${header.CamelHttpPath}, " +
+                                        "operation=${header.operation}, id=${header.id}, " +
+                                        "remote=${header.CamelVertxPlatformHttpRemoteAddress}"))
+
                                 .choice()
                                 .when(simple("${header.operation} == 'search'"))
                                 .to("direct:searchUserService")

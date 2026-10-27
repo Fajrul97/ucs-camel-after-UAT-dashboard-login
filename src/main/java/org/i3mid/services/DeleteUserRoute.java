@@ -54,11 +54,11 @@ public class DeleteUserRoute extends RouteBuilder {
 
                 .removeHeaders("Camel*")
 
-                .log("Received request from method=${header.HttpMethod}, " +
-                        "path=${header.HttpPath}, " +
-                        "url=${header.HttpUrl}, " +
-                        "localAddress=${header.HttpLocalAddress}, " +
-                        "remoteAddress=${header.HttpRemoteAddress}")
+                // .log("Received request from method=${header.HttpMethod}, " +
+                // "path=${header.HttpPath}, " +
+                // "url=${header.HttpUrl}, " +
+                // "localAddress=${header.HttpLocalAddress}, " +
+                // "remoteAddress=${header.HttpRemoteAddress}")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
@@ -131,11 +131,16 @@ public class DeleteUserRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
                 .setBody(constant(new Response("97", "FORBIDDEN")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.write}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
 
                 .when(exchange -> {
 
@@ -148,11 +153,17 @@ public class DeleteUserRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
                 .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.write}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(AccessDeniedException.class)
@@ -160,7 +171,8 @@ public class DeleteUserRoute extends RouteBuilder {
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
+                // .log(("Sending response ${body}"))
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body}")
                 .end()
 
         ;
@@ -188,11 +200,17 @@ public class DeleteUserRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.write}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
         ;

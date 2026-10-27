@@ -17,7 +17,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class AddUserRoute extends RouteBuilder {
 
     @Override
-    
+
     public void configure() {
         from("direct:addUserService").logMask()
 
@@ -57,11 +57,11 @@ public class AddUserRoute extends RouteBuilder {
 
                 .removeHeaders("Camel*")
 
-                .log("Received request from method=${header.HttpMethod}, " +
-                        "path=${header.HttpPath}, " +
-                        "url=${header.HttpUrl}, " +
-                        "localAddress=${header.HttpLocalAddress}, " +
-                        "remoteAddress=${header.HttpRemoteAddress}")
+                // .log("Received request from method=${header.HttpMethod}, " +
+                // "path=${header.HttpPath}, " +
+                // "url=${header.HttpUrl}, " +
+                // "localAddress=${header.HttpLocalAddress}, " +
+                // "remoteAddress=${header.HttpRemoteAddress}")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
                 .setHeader("Accept", constant("application/json"))
@@ -94,11 +94,17 @@ public class AddUserRoute extends RouteBuilder {
                 .removeHeaders("Camel*")
 
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.write}}, " +
+                // "responseCode=${header.HttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.HttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(HttpOperationFailedException.class)
@@ -140,11 +146,17 @@ public class AddUserRoute extends RouteBuilder {
                 })
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.write}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(AccessDeniedException.class)
@@ -152,7 +164,8 @@ public class AddUserRoute extends RouteBuilder {
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
+                // .log(("Sending response ${body}"))
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body}")
                 .end()
 
         ;

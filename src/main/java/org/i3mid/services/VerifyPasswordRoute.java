@@ -87,11 +87,11 @@ public class VerifyPasswordRoute extends RouteBuilder {
 
                 .removeHeaders("Camel*")
 
-                .log("Received request from method=${header.HttpMethod}, " +
-                        "path=${header.HttpPath}, " +
-                        "url=${header.HttpUrl}, " +
-                        "localAddress=${header.HttpLocalAddress}, " +
-                        "remoteAddress=${header.HttpRemoteAddress}")
+                // .log("Received request from method=${header.HttpMethod}, " +
+                // "path=${header.HttpPath}, " +
+                // "url=${header.HttpUrl}, " +
+                // "localAddress=${header.HttpLocalAddress}, " +
+                // "remoteAddress=${header.HttpRemoteAddress}")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
@@ -212,11 +212,17 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
                 .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(IllegalArgumentException.class)
@@ -235,11 +241,17 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("96", "INVALID PASSWORD/ENCRYPTION ALGORITHM")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(AccessDeniedException.class)
@@ -247,7 +259,8 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
                 .marshal().json()
-                .log(("Sending response ${body}"))
+                // .log(("Sending response ${body}"))
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body}")
                 .end()
 
         ;
@@ -277,11 +290,17 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
                 .onException(HttpOperationFailedException.class)
@@ -319,11 +338,17 @@ public class VerifyPasswordRoute extends RouteBuilder {
                     }
                 })
                 .marshal().json()
-                .log(("Sending response ${body}"))
-                .log(("Status response: " +
+                // .log(("Sending response ${body}"))
+                // .log(("Status response: " +
+                // "ucsUrl={{ucs.baseUrl.read}}, " +
+                // "responseCode=${header.CamelHttpResponseCode}, " +
+                // "latency=${exchangeProperty.ucsLatency} ms"))
+
+                .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
-                        "latency=${exchangeProperty.ucsLatency} ms"))
+                        "latency=${exchangeProperty.ucsLatency} ms")
+
                 .end()
 
         ;
