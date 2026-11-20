@@ -39,7 +39,9 @@ public class ChangePasswordRoute extends RouteBuilder {
     @Override
     public void configure() {
 
-        from("direct:searchChangePasswordService").logMask()
+        from("direct:searchChangePasswordService")
+                .routeId("change-password-lookup")
+                .logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -181,7 +183,7 @@ public class ChangePasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .when(exchange -> {
@@ -198,7 +200,7 @@ public class ChangePasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -217,6 +219,7 @@ public class ChangePasswordRoute extends RouteBuilder {
         ;
 
         from("direct:changePasswordService")
+                .routeId("change-password-ldap")
 
                 .removeHeaders("Camel*")
 
@@ -244,7 +247,7 @@ public class ChangePasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -290,7 +293,7 @@ public class ChangePasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()

@@ -36,17 +36,18 @@ public class Routes extends RouteBuilder {
                 httpComponent.setX509HostnameVerifier(new AllowAllHostnameVerifier());
 
                 from("timer:foo?repeatCount=1")
+                                .routeId("startup-jvm-check")
                                 .log("JVM Version: ${sys.java.runtime.version}");
 
                 rest("/ldapService")
                                 .get().to("direct:restService");
 
                 from("direct:restService")
-
+                                .routeId("ldap-gateway-router")
                                 .setProperty("reqInfo", simple(
-                                        "method=${header.CamelHttpMethod}, path=${header.CamelHttpPath}, " +
-                                        "operation=${header.operation}, id=${header.id}, " +
-                                        "remote=${header.CamelVertxPlatformHttpRemoteAddress}"))
+                                                "method=${header.CamelHttpMethod}, path=${header.CamelHttpPath}, " +
+                                                                "operation=${header.operation}, id=${header.id}, " +
+                                                                "remote=${header.CamelVertxPlatformHttpRemoteAddress}"))
 
                                 .choice()
                                 .when(simple("${header.operation} == 'search'"))

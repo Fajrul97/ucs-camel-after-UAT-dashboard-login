@@ -19,7 +19,9 @@ public class AddUserRoute extends RouteBuilder {
     @Override
 
     public void configure() {
-        from("direct:addUserService").logMask()
+        from("direct:addUserService")
+                .routeId("add-user-route")
+                .logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -84,7 +86,7 @@ public class AddUserRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
                 .setBody(constant(new Response("00", "SUCCESS")))
 
-                .setHeader("HttpResponseCode", header("CamelHttpResponseCode"))
+                .setHeader("HttpStatusCode", header("CamelHttpResponseCode"))
 
                 .removeHeaders("Camel*")
 
@@ -92,7 +94,7 @@ public class AddUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.HttpStatusCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -100,7 +102,7 @@ public class AddUserRoute extends RouteBuilder {
                 .onException(HttpOperationFailedException.class)
 
                 .removeHeader("Authorization")
-                
+
                 .process(exchange -> {
 
                     Long start = exchange.getProperty("ucsStartTime", Long.class);
@@ -141,7 +143,7 @@ public class AddUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()

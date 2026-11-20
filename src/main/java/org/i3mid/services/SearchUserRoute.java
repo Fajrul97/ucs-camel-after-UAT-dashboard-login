@@ -21,7 +21,9 @@ public class SearchUserRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        from("direct:searchUserService").logMask()
+        from("direct:searchUserService")
+                .routeId("search-user-route")
+                .logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -93,7 +95,7 @@ public class SearchUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .onException(AccessDeniedException.class)
@@ -110,7 +112,7 @@ public class SearchUserRoute extends RouteBuilder {
                 .onException(ResultNotFoundException.class)
 
                 .removeHeader("Authorization")
-                
+
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
                 .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .handled(true)
@@ -118,7 +120,7 @@ public class SearchUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()

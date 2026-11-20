@@ -18,7 +18,9 @@ public class DeleteUserRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        from("direct:searchDeleteUserService").logMask()
+        from("direct:searchDeleteUserService")
+                .routeId("delete-user-lookup")
+                .logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -130,7 +132,7 @@ public class DeleteUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .when(exchange -> {
@@ -147,7 +149,7 @@ public class DeleteUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -166,7 +168,7 @@ public class DeleteUserRoute extends RouteBuilder {
         ;
 
         from("direct:deleteUserService")
-
+                .routeId("delete-user-ldap")
                 .removeHeaders("Camel*")
 
                 .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
@@ -193,7 +195,7 @@ public class DeleteUserRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()

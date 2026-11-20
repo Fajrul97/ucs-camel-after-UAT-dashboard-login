@@ -31,7 +31,7 @@ public class GlobalUcsErrorConfiguration extends RouteConfigurationBuilder {
             .marshal().json()
             .log("[${exchangeId}] ${exchangeProperty.reqInfo} | errorType=UNKNOWN_HOST | " +
                  "detail=${exception.message} | ucsUrl=${exchangeProperty.targetUcsUrl}, " +
-                 "responseCode=502, latency=${exchangeProperty.ucsLatency} ms");
+                 "httpStatusCode=502, latency=${exchangeProperty.ucsLatency} ms");
 
         // 2. Kasus Connection Refused / Network Unreachable
         config.onException(ConnectException.class, NoRouteToHostException.class)
@@ -43,7 +43,7 @@ public class GlobalUcsErrorConfiguration extends RouteConfigurationBuilder {
             .marshal().json()
             .log("[${exchangeId}] ${exchangeProperty.reqInfo} | errorType=CONNECT_FAILED | " +
                  "detail=${exception.message} | ucsUrl=${exchangeProperty.targetUcsUrl}, " +
-                 "responseCode=503, latency=${exchangeProperty.ucsLatency} ms");
+                 "httpStatusCode=503, latency=${exchangeProperty.ucsLatency} ms");
 
         // 3. Kasus UCS Hang / Read atau Connect Timeout
         config.onException(SocketTimeoutException.class)
@@ -55,7 +55,7 @@ public class GlobalUcsErrorConfiguration extends RouteConfigurationBuilder {
             .marshal().json()
             .log("[${exchangeId}] ${exchangeProperty.reqInfo} | errorType=TIMEOUT | " +
                  "detail=${exception.message} | ucsUrl=${exchangeProperty.targetUcsUrl}, " +
-                 "responseCode=504, latency=${exchangeProperty.ucsLatency} ms");
+                 "httpStatusCode=504, latency=${exchangeProperty.ucsLatency} ms");
 
         // 4. Kasus HTTP Operation Failed yang tidak ditangani spesifik oleh route (misal 401/500/502/503 dari UCS)
         config.onException(HttpOperationFailedException.class)
@@ -73,7 +73,7 @@ public class GlobalUcsErrorConfiguration extends RouteConfigurationBuilder {
             .marshal().json()
             .log("[${exchangeId}] ${exchangeProperty.reqInfo} | errorType=HTTP_OPERATION_FAILED | " +
                  "upstreamStatus=${exchangeProperty.upstreamStatus} | detail=${exception.message} | " +
-                 "ucsUrl=${exchangeProperty.targetUcsUrl}, responseCode=502, " +
+                 "ucsUrl=${exchangeProperty.targetUcsUrl}, httpStatusCode=502, " +
                  "latency=${exchangeProperty.ucsLatency} ms");
 
         // 5. Fallback untuk IOException jaringan lainnya (misal SSLHandshakeException / Broken pipe)
@@ -86,7 +86,7 @@ public class GlobalUcsErrorConfiguration extends RouteConfigurationBuilder {
             .marshal().json()
             .log("[${exchangeId}] ${exchangeProperty.reqInfo} | errorType=IO_ERROR | " +
                  "detail=${exception.class.name}: ${exception.message} | " +
-                 "ucsUrl=${exchangeProperty.targetUcsUrl}, responseCode=502, " +
+                 "ucsUrl=${exchangeProperty.targetUcsUrl}, httpStatusCode=502, " +
                  "latency=${exchangeProperty.ucsLatency} ms");
     }
 

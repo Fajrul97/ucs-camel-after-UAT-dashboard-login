@@ -24,7 +24,9 @@ public class ResetPasswordRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        from("direct:searchResetPasswordService").logMask()
+        from("direct:searchResetPasswordService")
+                .routeId("reset-password-lookup")
+                .logMask()
 
                 // Process JWT for RBAC
                 .process(new JWTProcessor())
@@ -139,7 +141,7 @@ public class ResetPasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .when(exchange -> {
@@ -156,7 +158,7 @@ public class ResetPasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -175,6 +177,7 @@ public class ResetPasswordRoute extends RouteBuilder {
         ;
 
         from("direct:resetPasswordService")
+                .routeId("reset-password-ucs")
 
                 .removeHeaders("Camel*")
 
@@ -202,7 +205,7 @@ public class ResetPasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
@@ -232,7 +235,7 @@ public class ResetPasswordRoute extends RouteBuilder {
 
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.write}}, " +
-                        "responseCode=${header.CamelHttpResponseCode}, " +
+                        "httpStatusCode=${header.CamelHttpResponseCode}, " +
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .end()
