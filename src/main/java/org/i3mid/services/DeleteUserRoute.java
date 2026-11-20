@@ -56,13 +56,15 @@ public class DeleteUserRoute extends RouteBuilder {
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .process(exchange -> {
                     exchange.setProperty("ucsStartTime", System.currentTimeMillis());
                 })
 
-                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
+                .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/?query[uid]=${header.id}")
+
+                .removeHeader("Authorization")
 
                 .unmarshal(new JacksonDataFormat(UserInput.class))
 
@@ -151,6 +153,9 @@ public class DeleteUserRoute extends RouteBuilder {
                 .end()
 
                 .onException(AccessDeniedException.class)
+
+                .removeHeader("Authorization")
+
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
@@ -163,12 +168,14 @@ public class DeleteUserRoute extends RouteBuilder {
         from("direct:deleteUserService")
 
                 .removeHeaders("Camel*")
+
                 .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
                 .setHeader("Accept", constant("application/json"))
-
                 .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/" + "${exchangeProperty.MyBodyProperty}")
+
+                .removeHeader("Authorization")
 
                 .process(exchange -> {
 

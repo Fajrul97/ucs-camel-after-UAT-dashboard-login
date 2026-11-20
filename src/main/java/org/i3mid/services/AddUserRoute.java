@@ -59,7 +59,6 @@ public class AddUserRoute extends RouteBuilder {
 
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
                 .setHeader("Accept", constant("application/json"))
-
                 .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .marshal().json()
@@ -69,6 +68,8 @@ public class AddUserRoute extends RouteBuilder {
                 })
 
                 .toD("{{ucs.baseUrl.write}}/univention/udm/users/user/")
+
+                .removeHeader("Authorization")
 
                 .process(exchange -> {
 
@@ -98,6 +99,8 @@ public class AddUserRoute extends RouteBuilder {
 
                 .onException(HttpOperationFailedException.class)
 
+                .removeHeader("Authorization")
+                
                 .process(exchange -> {
 
                     Long start = exchange.getProperty("ucsStartTime", Long.class);
@@ -144,6 +147,9 @@ public class AddUserRoute extends RouteBuilder {
                 .end()
 
                 .onException(AccessDeniedException.class)
+
+                .removeHeader("Authorization")
+
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)

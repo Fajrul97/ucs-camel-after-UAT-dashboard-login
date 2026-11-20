@@ -61,13 +61,15 @@ public class SearchUserRoute extends RouteBuilder {
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .process(exchange -> {
                     exchange.setProperty("ucsStartTime", System.currentTimeMillis());
                 })
 
-                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}")
+
+                .removeHeader("Authorization")
 
                 .process(exchange -> {
 
@@ -95,6 +97,9 @@ public class SearchUserRoute extends RouteBuilder {
                         "latency=${exchangeProperty.ucsLatency} ms")
 
                 .onException(AccessDeniedException.class)
+
+                .removeHeader("Authorization")
+
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
                 .setBody(constant(new Response("90", "INVALID USER ROLE")))
                 .handled(true)
@@ -103,6 +108,9 @@ public class SearchUserRoute extends RouteBuilder {
                 .end()
 
                 .onException(ResultNotFoundException.class)
+
+                .removeHeader("Authorization")
+                
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
                 .setBody(constant(new Response("99", "DATA NOT FOUND")))
                 .handled(true)

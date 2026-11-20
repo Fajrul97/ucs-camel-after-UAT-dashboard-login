@@ -89,6 +89,7 @@ public class VerifyPasswordRoute extends RouteBuilder {
 
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Accept", constant("application/json"))
+                .setHeader("Authorization", simple("{{ucs.basic64}}"))
 
                 .process(exchange -> {
                     exchange.setProperty("ucsStartTime", System.currentTimeMillis());
@@ -107,8 +108,10 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 })
                 .otherwise()
                 // .log("Cache MISS for uid=${header.id}, fetching from UCS")
-                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}" +
-                        "&authUsername={{ucs.username}}" + "&authPassword={{ucs.password}}")
+                .toD("{{ucs.baseUrl.read}}/univention/udm/users/user/?query[uid]=${header.id}")
+
+                .removeHeader("Authorization")
+
                 .unmarshal(new JacksonDataFormat(UserInput.class))
                 .process(exchange -> {
                     String uid = exchange.getIn().getHeader("id", String.class);
@@ -242,10 +245,16 @@ public class VerifyPasswordRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
                 .setHeader("Content-Type", constant("application/x-www-form-urlencoded"))
                 .setBody(exchange -> {
-                    String username = exchange.getProperty("username", String.class);
-                    String password = exchange.getProperty("password", String.class);
-                    return "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)
-                            + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8);
+                    try {
+                        String username = exchange.getProperty("username", String.class);
+                        String password = exchange.getProperty("password", String.class);
+                        return "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)
+                                + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8);
+                    } finally {
+                        exchange.removeProperty("password");
+                        exchange.getIn().removeHeader("password");
+                    }
+
                 })
 
                 .toD("{{ucs.baseUrl.read}}/univention/auth")
@@ -305,7 +314,7 @@ public class VerifyPasswordRoute extends RouteBuilder {
                     }
                 })
                 .marshal().json()
-    
+
                 .log("[${exchangeId}] ${exchangeProperty.reqInfo} | response=${body} | " +
                         "ucsUrl={{ucs.baseUrl.read}}, " +
                         "responseCode=${header.CamelHttpResponseCode}, " +
