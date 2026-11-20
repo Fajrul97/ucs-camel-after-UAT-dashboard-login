@@ -22,8 +22,8 @@ public class Routes extends RouteBuilder {
         public void configure() throws Exception {
                 HttpComponent httpComponent = getContext().getComponent("https", HttpComponent.class);
 
-                httpComponent.setMaxTotalConnections(400);
-                httpComponent.setConnectionsPerRoute(400);
+                httpComponent.setMaxTotalConnections(200);
+                httpComponent.setConnectionsPerRoute(200);
                 httpComponent.setConnectionTimeToLive(60000L);
 
                 TrustManagersParameters trustManagersParameters = new TrustManagersParameters();
